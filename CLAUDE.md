@@ -8,7 +8,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 - **Purpose:** Native Flutter client for all three roles (ADMIN, PROVIDER, PATIENT), backed by the same Postgres/Prisma data as `HIV-Project-Web` — not a WebView wrapper.
 - **Backend:** `HIV-Project-Web`'s Next.js API routes (`https://hiv-project-web.vercel.app/api`), reused as-is. Auth is Bearer-token (vs. the web app's httpOnly cookie) — see "Mobile integration" in `HIV-Project-Web/CLAUDE.md`.
 - **Package/org:** `com.medicarehiv.hiv_project_app`
-- **Status:** Phase 1 (scaffold + auth) and Phase 2 (Patient role) done. Phase 3 (Provider role) next.
+- **Status:** Phase 1 (auth), Phase 2 (Patient role), Phase 3 (Provider role) done. Phase 4 (Admin role) next.
 - **Owner:** igedehendrayana94
 - **Full phased build plan:** `~/.claude/plans/typed-plotting-hearth.md`
 
@@ -67,3 +67,17 @@ the user once available.
   role `PATIENT`; Provider/Admin still hit the Phase-1 placeholder. `flutter analyze` clean
   (two harmless `RadioListTile` deprecation infos left as-is — functional, not worth a
   `RadioGroup` refactor yet), `flutter build web` succeeds, widget test passes.
+- 2026-07-28: Phase 3 (Provider role). Same pattern as Phase 2 — found the backend gaps by
+  reading actual page code, not by guessing: `GET /api/patients/[id]` didn't exist at all
+  (`patients/[id]/page.tsx` reads it server-side; added a route with the same access rule
+  proxy.ts already enforces — any logged-in role can view a single patient by id, only the
+  raw `/patients` *list* is Admin-only, so Provider mobile has no patient-browse screen, same
+  as the web app — reached only via a consultation), and `GET /api/consultations/[id]/messages`
+  didn't expose `patientId`/`patientName` (added both so the thread screen can link to that
+  patient's history without a second lookup). Built Live Consultations inbox (urgency-colored
+  list, matches the existing GET /api/consultations ordering), a consultation thread screen
+  (10s `Timer.periodic` polling, claim/mark-resolved actions, patient-history link), and a
+  read-only patient detail screen (basic info + screening history, reusing the same
+  `ScreeningAssessment` model and `riskInfo` map from Phase 2). `RoleHomeScreen` now routes
+  PROVIDER to a real home; Admin still hits the Phase-1 placeholder. `flutter analyze` clean
+  (same two pre-existing infos), `flutter build web` succeeds, widget test passes.
