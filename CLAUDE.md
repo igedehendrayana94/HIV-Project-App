@@ -8,7 +8,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 - **Purpose:** Native Flutter client for all three roles (ADMIN, PROVIDER, PATIENT), backed by the same Postgres/Prisma data as `HIV-Project-Web` — not a WebView wrapper.
 - **Backend:** `HIV-Project-Web`'s Next.js API routes (`https://hiv-project-web.vercel.app/api`), reused as-is. Auth is Bearer-token (vs. the web app's httpOnly cookie) — see "Mobile integration" in `HIV-Project-Web/CLAUDE.md`.
 - **Package/org:** `com.medicarehiv.hiv_project_app`
-- **Status:** Phase 1 (auth), Phase 2 (Patient role), Phase 3 (Provider role) done. Phase 4 (Admin role) next.
+- **Status:** All 4 phases done — Patient, Provider, and Admin roles built, backed by the shared `HIV-Project-Web` backend. Phase 5 (polish) not started.
 - **Owner:** igedehendrayana94
 - **Full phased build plan:** `~/.claude/plans/typed-plotting-hearth.md`
 
@@ -81,3 +81,32 @@ the user once available.
   `ScreeningAssessment` model and `riskInfo` map from Phase 2). `RoleHomeScreen` now routes
   PROVIDER to a real home; Admin still hits the Phase-1 placeholder. `flutter analyze` clean
   (same two pre-existing infos), `flutter build web` succeeds, widget test passes.
+- 2026-07-28: Phase 4 (Admin role), plus one real gap noticed along the way: Phase 2 never
+  gave a Patient a way to actually create their own `Patient` record (the web app's
+  `/patients/register` self-registration page, which `POST /api/patients` already supports
+  for a PATIENT session) — a freshly-approved signup would 404 on every screening/chat call
+  with "No patient record linked to this account" and have no in-app way out. Added
+  `RegisterPatientScreen` (name/email/phone/DOB/timezone, timezone defaults to
+  `Asia/Jakarta` — no IANA-timezone-detection package added for one text field) and a nav
+  entry on the Patient home.
+  Backend gaps found for Admin, same pattern as every phase before it: `GET /api/admin/users`
+  was missing `status` (added it — needed to tell PENDING/REJECTED apart for approve/reject
+  actions), and there was no `GET /api/patients` at all (`patients/page.tsx`, Admin-only on
+  the web, reads it server-side) — added one gated to PROVIDER/ADMIN, not just Admin, since
+  Provider needs a patient picker for reminders too, matching `POST /api/reminders`'s own role
+  check.
+  Built: Users (approve/reject/edit/delete, create-account form — skips the web form's
+  optional "link an existing unlinked patient" convenience, since a patient can now
+  self-register instead), Screening Questions (add/delete; the add form always creates the
+  standard 1-4 severity scale rather than a fully dynamic option-list editor — matches every
+  built-in symptom except one), Symptom Rules (add, toggle highRisk — no delete endpoint
+  exists, matches the web app), Medication Reminders (patient picker + set form, reusing
+  `GET/POST /api/reminders`), and Reports (CSV export). The export needed a real design
+  change from the original plan: `GET /api/reports/export` needs the Bearer token like every
+  other route, so a bare external-browser link (`url_launcher`, the original plan's
+  assumption) can't authenticate — swapped `url_launcher` (added in Phase 1, never used) for
+  `share_plus`: download the CSV via the already-authenticated `dio` client, hand the bytes
+  straight to the OS share sheet. `RoleHomeScreen` now dispatches all three roles to their
+  real home (Admin reuses Provider's Live-Consultations screen directly, not a copy).
+  `flutter analyze` clean (same two pre-existing infos), `flutter build web` succeeds, widget
+  test passes.

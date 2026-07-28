@@ -6,6 +6,7 @@ import '../account/account_screen.dart';
 import '../chat/chat_screen.dart';
 import '../history/screening_history_screen.dart';
 import '../reminders/reminder_screen.dart';
+import '../registration/register_patient_screen.dart';
 import '../screening/new_screening_screen.dart';
 
 // Mirrors (protected)/dashboard/page.tsx's PATIENT view: the survey-explanation box + a
@@ -56,6 +57,11 @@ class PatientHomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+          _NavCard(
+            icon: Icons.badge_outlined,
+            title: 'Register as Patient',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPatientScreen())),
+          ),
           _NavCard(
             icon: Icons.fact_check_outlined,
             title: 'New Screening',
