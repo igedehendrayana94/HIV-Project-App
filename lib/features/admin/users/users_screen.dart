@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../shared/async_error_view.dart';
 import 'create_user_screen.dart';
 import 'models.dart';
 import 'users_provider.dart';
@@ -19,7 +20,8 @@ class UsersScreen extends ConsumerWidget {
       ),
       body: usersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
+        error: (e, _) =>
+            AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(adminUsersProvider)),
         data: (users) {
           final pending = users.where((u) => u.status != 'APPROVED').toList();
           final approved = users.where((u) => u.status == 'APPROVED').toList();

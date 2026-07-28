@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../shared/async_error_view.dart';
 import '../../patient/screening/domains_provider.dart';
 
 class ScreeningQuestion {
@@ -36,21 +37,25 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
       ),
       body: questionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
-        data: (questions) => ListView(
-          children: questions
-              .map((q) => ListTile(
-                    title: Text(q.questionEn),
-                    subtitle: Text('${q.domainKey} · ${q.key}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () async {
-                        await dio.delete('/admin/screening-questions/${q.id}');
-                        ref.invalidate(screeningQuestionsProvider);
-                      },
-                    ),
-                  ))
-              .toList(),
+        error: (e, _) =>
+            AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(screeningQuestionsProvider)),
+        data: (questions) => RefreshIndicator(
+          onRefresh: () => ref.refresh(screeningQuestionsProvider.future),
+          child: ListView(
+            children: questions
+                .map((q) => ListTile(
+                      title: Text(q.questionEn),
+                      subtitle: Text('${q.domainKey} · ${q.key}'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () async {
+                          await dio.delete('/admin/screening-questions/${q.id}');
+                          ref.invalidate(screeningQuestionsProvider);
+                        },
+                      ),
+                    ))
+                .toList(),
+          ),
         ),
       ),
     );
@@ -115,7 +120,7 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
       appBar: AppBar(title: const Text('New Screening Question')),
       body: domainsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
+        error: (e, _) => AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(domainsProvider)),
         data: (domains) => Padding(
           padding: const EdgeInsets.all(16),
           child: Form(

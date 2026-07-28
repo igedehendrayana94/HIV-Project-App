@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../shared/async_error_view.dart';
 import 'domains_provider.dart';
 import 'models.dart';
 import 'result_screen.dart';
@@ -61,7 +62,7 @@ class _NewScreeningScreenState extends ConsumerState<NewScreeningScreen> {
       appBar: AppBar(title: const Text('New Screening')),
       body: domainsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
+        error: (e, _) => AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(domainsProvider)),
         data: (domains) => Column(
           children: [
             Expanded(

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 - **Purpose:** Native Flutter client for all three roles (ADMIN, PROVIDER, PATIENT), backed by the same Postgres/Prisma data as `HIV-Project-Web` — not a WebView wrapper.
 - **Backend:** `HIV-Project-Web`'s Next.js API routes (`https://hiv-project-web.vercel.app/api`), reused as-is. Auth is Bearer-token (vs. the web app's httpOnly cookie) — see "Mobile integration" in `HIV-Project-Web/CLAUDE.md`.
 - **Package/org:** `com.medicarehiv.hiv_project_app`
-- **Status:** All 4 phases done — Patient, Provider, and Admin roles built, backed by the shared `HIV-Project-Web` backend. Phase 5 (polish) not started.
+- **Status:** All 5 planned phases done — Patient, Provider, and Admin roles built and polished, backed by the shared `HIV-Project-Web` backend. Real device/emulator testing is the remaining open item (not possible from this dev machine).
 - **Owner:** igedehendrayana94
 - **Full phased build plan:** `~/.claude/plans/typed-plotting-hearth.md`
 
@@ -108,5 +108,23 @@ the user once available.
   `share_plus`: download the CSV via the already-authenticated `dio` client, hand the bytes
   straight to the OS share sheet. `RoleHomeScreen` now dispatches all three roles to their
   real home (Admin reuses Provider's Live-Consultations screen directly, not a copy).
+  `flutter analyze` clean (same two pre-existing infos), `flutter build web` succeeds, widget
+  test passes.
+- 2026-07-28: Phase 5 (polish). Added one shared `AsyncErrorView` widget (icon + message +
+  Retry button, `ref.invalidate(...)` on tap) and swapped it into every `FutureProvider
+  .when()` error branch across all three roles — previously each screen's error state was a
+  bare `Center(Text(...))` with no recovery short of leaving and re-entering. Added
+  `RefreshIndicator` to the handful of list screens that were still missing it (symptom
+  rules, screening questions, the admin patient picker, the read-only reminder view, patient
+  detail) so pull-to-refresh is now consistent everywhere there's a list or a single fetched
+  record, including the empty-state case (previously a plain `Center` with no scrollable
+  ancestor, so pulling did nothing). App naming/branding: every platform's scaffold-default
+  name (`hiv_project_app` / "Hiv Project App") replaced with "Medi-Care HIV" — Android
+  manifest label, iOS `CFBundleDisplayName`/`CFBundleName`, macOS `PRODUCT_NAME`, web
+  manifest + `index.html` title/meta. Android's launch (splash) background recolored from
+  the Flutter-default white to the app's teal (`#0D9488`, matches `lib/core/theme.dart`'s
+  seed color) via a new `values/colors.xml`. Skipped a real custom app *icon* — every
+  platform still ships Flutter's default icon — since there's no source logo asset to
+  generate one from; add via `flutter_launcher_icons` once a design exists.
   `flutter analyze` clean (same two pre-existing infos), `flutter build web` succeeds, widget
   test passes.

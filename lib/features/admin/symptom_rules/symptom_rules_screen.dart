@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../shared/async_error_view.dart';
 
 class SymptomRule {
   final int id;
@@ -31,19 +32,23 @@ class SymptomRulesScreen extends ConsumerWidget {
       ),
       body: rulesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
-        data: (rules) => ListView(
-          children: rules
-              .map((r) => SwitchListTile(
-                    title: Text(r.label),
-                    subtitle: Text(r.key),
-                    value: r.highRisk,
-                    onChanged: (v) async {
-                      await dio.patch('/admin/symptom-rules/${r.id}', data: {'highRisk': v});
-                      ref.invalidate(symptomRulesProvider);
-                    },
-                  ))
-              .toList(),
+        error: (e, _) =>
+            AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(symptomRulesProvider)),
+        data: (rules) => RefreshIndicator(
+          onRefresh: () => ref.refresh(symptomRulesProvider.future),
+          child: ListView(
+            children: rules
+                .map((r) => SwitchListTile(
+                      title: Text(r.label),
+                      subtitle: Text(r.key),
+                      value: r.highRisk,
+                      onChanged: (v) async {
+                        await dio.patch('/admin/symptom-rules/${r.id}', data: {'highRisk': v});
+                        ref.invalidate(symptomRulesProvider);
+                      },
+                    ))
+                .toList(),
+          ),
         ),
       ),
     );

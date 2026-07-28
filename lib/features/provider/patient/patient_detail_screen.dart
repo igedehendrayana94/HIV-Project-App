@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../shared/async_error_view.dart';
 import '../../../shared/risk.dart';
 import '../../patient/screening/models.dart';
 
@@ -32,41 +33,52 @@ class PatientDetailScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Patient')),
       body: patientAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
+        error: (e, _) =>
+            AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(_patientProvider(patientId))),
         data: (data) {
           final patient = data['patient'] as Map<String, dynamic>;
           final code = 'P${(data['rank'] as int).toString().padLeft(4, '0')}';
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text('${patient['name']} · $code', style: Theme.of(context).textTheme.titleLarge),
-              if (patient['phone'] != null) Text(patient['phone'] as String),
-              if (patient['email'] != null) Text(patient['email'] as String),
-              const SizedBox(height: 24),
-              Text('Screening History', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              historyAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Text(apiErrorMessage(e)),
-                data: (history) {
-                  final assessments = history['screeningAssessments'] as List<ScreeningAssessment>;
-                  if (assessments.isEmpty) return const Text('No screenings yet.');
-                  return Column(
-                    children: assessments.map((a) {
-                      final info = riskInfo[a.overallRisk]!;
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('${info.emoji} ${info.label}'),
-                        subtitle: Text(a.createdAt.toLocal().toString()),
-                        trailing: a.redFlag
-                            ? Text('RED FLAG', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))
-                            : null,
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-            ],
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(_patientProvider(patientId));
+              ref.invalidate(_patientHistoryProvider(patientId));
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text('${patient['name']} · $code', style: Theme.of(context).textTheme.titleLarge),
+                if (patient['phone'] != null) Text(patient['phone'] as String),
+                if (patient['email'] != null) Text(patient['email'] as String),
+                const SizedBox(height: 24),
+                Text('Screening History', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                historyAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => AsyncErrorView(
+                    message: apiErrorMessage(e),
+                    onRetry: () => ref.invalidate(_patientHistoryProvider(patientId)),
+                  ),
+                  data: (history) {
+                    final assessments = history['screeningAssessments'] as List<ScreeningAssessment>;
+                    if (assessments.isEmpty) return const Text('No screenings yet.');
+                    return Column(
+                      children: assessments.map((a) {
+                        final info = riskInfo[a.overallRisk]!;
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text('${info.emoji} ${info.label}'),
+                          subtitle: Text(a.createdAt.toLocal().toString()),
+                          trailing: a.redFlag
+                              ? Text('RED FLAG',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))
+                              : null,
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ),
           );
         },
       ),

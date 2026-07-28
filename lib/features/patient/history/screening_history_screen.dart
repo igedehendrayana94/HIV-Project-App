@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../shared/async_error_view.dart';
 import '../../../shared/risk.dart';
 import 'history_provider.dart';
 
@@ -14,7 +15,8 @@ class ScreeningHistoryScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Screening History')),
       body: historyAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
+        error: (e, _) =>
+            AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(screeningHistoryProvider)),
         data: (assessments) {
           if (assessments.isEmpty) {
             return const Center(child: Text('No screenings yet.'));

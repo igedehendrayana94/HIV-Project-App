@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../shared/async_error_view.dart';
 import 'consultation_thread_screen.dart';
 import 'consultations_provider.dart';
 import 'models.dart';
@@ -21,20 +22,23 @@ class ConsultationsInboxScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Live Consultations')),
       body: listAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(apiErrorMessage(e))),
-        data: (items) {
-          if (items.isEmpty) {
-            return const Center(child: Text('No open consultations.'));
-          }
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(consultationsProvider.future),
-            child: ListView.separated(
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, i) => _ConsultationRow(item: items[i]),
-            ),
-          );
-        },
+        error: (e, _) =>
+            AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(consultationsProvider)),
+        data: (items) => RefreshIndicator(
+          onRefresh: () => ref.refresh(consultationsProvider.future),
+          child: items.isEmpty
+              ? ListView(
+                  children: const [
+                    SizedBox(height: 120),
+                    Center(child: Text('No open consultations.')),
+                  ],
+                )
+              : ListView.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, i) => _ConsultationRow(item: items[i]),
+                ),
+        ),
       ),
     );
   }
