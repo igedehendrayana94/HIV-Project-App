@@ -45,6 +45,17 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     await dio.post('/auth/signup', data: {'name': name, 'email': email, 'password': password});
   }
 
+  Future<void> updateProfile({required String name, required String email, String? password}) async {
+    final res = await dio.patch('/account', data: {
+      'name': name,
+      'email': email,
+      if (password != null && password.isNotEmpty) 'password': password,
+    });
+    final token = res.data['token'] as String;
+    await TokenStorage.save(token);
+    state = AsyncData(AuthUser.fromToken(token));
+  }
+
   Future<void> logout() async {
     await TokenStorage.clear();
     state = const AsyncData(null);
