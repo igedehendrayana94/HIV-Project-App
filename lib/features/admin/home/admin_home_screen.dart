@@ -20,8 +20,6 @@ class AdminHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).value;
     final items = [
-      (Icons.fact_check_outlined, AppStrings.t('screeningQuestions'),
-          () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScreeningQuestionsScreen()))),
       (Icons.rule_outlined, AppStrings.t('symptomRules'),
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SymptomRulesScreen()))),
       (Icons.notifications_active_outlined, AppStrings.t('medicationReminders'),
@@ -39,6 +37,26 @@ class AdminHomeScreen extends ConsumerWidget {
             children: [
               Text(AppStrings.greeting(user?.name ?? ''), style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: AppSpacing.md),
+              // "Screening Questions" now lives inside this "Screening Patients" group
+              // instead of being its own top-level card — same grouping idea as the web
+              // sidebar's "Screening Patient" parent item, just a local expansion here
+              // rather than a separate screen since there's only one child so far.
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: ExpansionTile(
+                  leading: const Icon(Icons.fact_check_outlined),
+                  title: Text(AppStrings.t('screeningPatients')),
+                  children: [
+                    ListTile(
+                      title: Text(AppStrings.t('screeningQuestions')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context)
+                          .push(MaterialPageRoute(builder: (_) => const ScreeningQuestionsScreen())),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+              const SizedBox(height: AppSpacing.sm),
               for (final (i, item) in items.indexed) ...[
                 AppCard(
                   onTap: item.$3,
@@ -50,7 +68,7 @@ class AdminHomeScreen extends ConsumerWidget {
                       const Icon(Icons.chevron_right),
                     ],
                   ),
-                ).animate(delay: (i * 60).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+                ).animate(delay: ((i + 1) * 60).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
                 if (i != items.length - 1) const SizedBox(height: AppSpacing.sm),
               ],
             ],

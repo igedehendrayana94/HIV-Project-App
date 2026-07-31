@@ -55,6 +55,7 @@ const Map<String, Map<AppLocale, String>> _strings = {
 
   // Admin — Symptom Rules
   'symptomRules': {AppLocale.en: 'Symptom Rules', AppLocale.id: 'Aturan Gejala'},
+  'screeningPatients': {AppLocale.en: 'Screening Patients', AppLocale.id: 'Skrining Pasien'},
   'newSymptomRule': {AppLocale.en: 'New Symptom Rule', AppLocale.id: 'Aturan Gejala Baru'},
   'highRisk': {AppLocale.en: 'High Risk', AppLocale.id: 'Risiko Tinggi'},
   'keyUniqueNoSpaces': {
