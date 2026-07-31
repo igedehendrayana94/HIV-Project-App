@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'auth_state.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/signup_screen.dart';
+import '../features/landing/landing_screen.dart';
 import '../features/admin/admin_shell.dart';
 import '../features/patient/patient_shell.dart';
 import '../features/provider/provider_shell.dart';
@@ -19,16 +20,19 @@ final routerProvider = Provider<GoRouter>((ref) {
   final role = authState.value?.role;
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     redirect: (context, state) {
       if (authState.isLoading) return null;
       final loggedIn = authState.value != null;
-      final onAuthScreen = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
-      if (!loggedIn) return onAuthScreen ? null : '/login';
-      if (onAuthScreen) return '/home';
+      final onPreAuthScreen = state.matchedLocation == '/' ||
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/signup';
+      if (!loggedIn) return onPreAuthScreen ? null : '/';
+      if (onPreAuthScreen) return '/home';
       return null;
     },
     routes: [
+      GoRoute(path: '/', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
       if (role == 'PATIENT') ...patientShellRoutes(),

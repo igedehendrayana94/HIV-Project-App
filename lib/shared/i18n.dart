@@ -221,6 +221,47 @@ const Map<String, Map<AppLocale, String>> _strings = {
   },
   'back': {AppLocale.en: 'Back', AppLocale.id: 'Kembali'},
   'next': {AppLocale.en: 'Next', AppLocale.id: 'Lanjut'},
+
+  // Landing (public, pre-auth) — mirrors HIV-Project-Web's src/app/page.tsx copy exactly,
+  // condensed to a single-scroll mobile layout (hero + value props + CTAs, no separate
+  // "how it works"/privacy sections — those stay web-only, this is a lighter distillation).
+  'landingSignIn': {AppLocale.en: 'Sign in', AppLocale.id: 'Masuk'},
+  'landingCreateAccount': {AppLocale.en: 'Create account', AppLocale.id: 'Buat akun'},
+  'landingHeadline': {AppLocale.en: 'Your care team, always on.', AppLocale.id: 'Tim perawatan Anda, selalu siap.'},
+  'landingSubtext': {
+    AppLocale.en:
+        'Two-stage symptom screening, real-time provider chat, and medication reminders in '
+        'one private platform built for people living with HIV.',
+    AppLocale.id:
+        'Skrining gejala dua tahap, obrolan langsung dengan petugas, dan pengingat obat '
+        'dalam satu platform pribadi yang dibuat untuk orang dengan HIV.',
+  },
+  'landingU2UInfo': {
+    AppLocale.en:
+        'With consistent ART, HIV is a manageable condition. An undetectable viral load also '
+        'means the virus cannot be sexually transmitted, a fact doctors call U=U '
+        '(Undetectable = Untransmittable).',
+    AppLocale.id:
+        'Dengan ART yang konsisten, HIV adalah kondisi yang dapat dikendalikan. Viral load '
+        'yang tidak terdeteksi juga berarti virus tidak dapat ditularkan secara seksual, hal '
+        'yang oleh dokter disebut U=U (Undetectable = Untransmittable).',
+  },
+  'landingValueScreening': {
+    AppLocale.en: '6-domain clinical screening model',
+    AppLocale.id: 'Model skrining klinis 6 domain',
+  },
+  'landingValueAssistant': {
+    AppLocale.en: 'Assistant triage, real providers behind it',
+    AppLocale.id: 'Triase oleh asisten, ditangani petugas sungguhan',
+  },
+  'landingValuePrivate': {
+    AppLocale.en: 'Private by default, visible only to your care team',
+    AppLocale.id: 'Privat secara default, hanya terlihat oleh tim perawatan Anda',
+  },
+  'landingFooterTagline': {
+    AppLocale.en: 'Clinical decision support for ART care. Not a substitute for emergency services.',
+    AppLocale.id: 'Dukungan keputusan klinis untuk perawatan ART. Bukan pengganti layanan darurat.',
+  },
   'areYouSure': {AppLocale.en: 'Are you sure?', AppLocale.id: 'Apakah Anda yakin?'},
   'logoutConfirmMessage': {
     AppLocale.en: 'Are you sure you want to log out?',
