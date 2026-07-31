@@ -3,6 +3,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
+import '../../../shared/i18n.dart';
 
 // GET /api/reports/export requires the Bearer token (same as every other route) — a bare
 // external-browser link (the original plan's assumption) can't carry that, since the token
@@ -45,26 +48,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reports')),
+      appBar: AppBar(title: Text(AppStrings.t('reports'))),
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Export patient ID, name, screening date/time, and risk level as a CSV file.'),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _downloading ? null : _export,
-              icon: _downloading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.download),
-              label: const Text('Export to Excel (CSV)'),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 16),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(AppStrings.t('exportReportsDesc')),
+              const SizedBox(height: AppSpacing.md),
+              FilledButton.icon(
+                onPressed: _downloading ? null : _export,
+                icon: _downloading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.download),
+                label: Text(AppStrings.t('exportToExcel')),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth_state.dart';
+import '../../../core/theme.dart';
+import '../../../shared/ambient_glow.dart';
+import '../../../shared/app_card.dart';
 import '../../../shared/i18n.dart';
-import '../account/account_screen.dart';
-import '../chat/chat_screen.dart';
 import '../history/screening_history_screen.dart';
-import '../reminders/reminder_screen.dart';
 import '../registration/register_patient_screen.dart';
-import '../screening/new_screening_screen.dart';
 
-// Mirrors (protected)/dashboard/page.tsx's PATIENT view: the survey-explanation box + a
-// "talk to the AI chatbot" card — plus quick links to the other Patient-role screens
-// (New Screening, History, Reminder, Account), which the web app reaches via the sidebar
-// instead of a dashboard card since it has permanent nav chrome and this doesn't yet.
+// Landing tab inside PatientShell (see patient_shell.dart) — Screening/Chat/Reminder/Account
+// are now real bottom-nav tabs, not cards here; this stays a light hub for the survey
+// explainer plus the two genuinely one-off/secondary destinations (register, history).
 class PatientHomeScreen extends ConsumerWidget {
   const PatientHomeScreen({super.key});
 
@@ -20,84 +19,45 @@ class PatientHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).value;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppStrings.t('appName')),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountScreen())),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      appBar: AppBar(title: Text(AppStrings.t('appName'))),
+      body: Stack(
         children: [
-          Text('Hi, ${user?.name ?? ''}', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 16),
-          Card(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            child: const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'This app uses a two-stage survey: first a Yes/No for each symptom, then a '
-                '1–4 severity rating if you answered Yes. Your responses help your care team '
-                'spot ARV side effects early.',
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: ListTile(
-              title: const Text('Need help now?'),
-              subtitle: const Text('Talk to our AI symptom-triage assistant.'),
-              trailing: FilledButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen())),
-                child: const Text('Start Chat'),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          _NavCard(
-            icon: Icons.badge_outlined,
-            title: 'Register as Patient',
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPatientScreen())),
-          ),
-          _NavCard(
-            icon: Icons.fact_check_outlined,
-            title: 'New Screening',
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewScreeningScreen())),
-          ),
-          _NavCard(
-            icon: Icons.history,
-            title: 'Screening History',
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScreeningHistoryScreen())),
-          ),
-          _NavCard(
-            icon: Icons.notifications_active_outlined,
-            title: 'Medication Reminder',
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReminderScreen())),
+          const Positioned.fill(child: AmbientGlow()),
+          ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              Text(AppStrings.greeting(user?.name ?? ''), style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: AppSpacing.md),
+              AppCard(
+                child: Text(AppStrings.t('surveyExplanation'), style: Theme.of(context).textTheme.bodyMedium),
+              ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+              const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScreeningHistoryScreen())),
+                child: Row(
+                  children: [
+                    const Icon(Icons.history),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: Text(AppStrings.t('screeningHistory'))),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ).animate(delay: 80.ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+              const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPatientScreen())),
+                child: Row(
+                  children: [
+                    const Icon(Icons.badge_outlined),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: Text(AppStrings.t('registerAsPatient'))),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ).animate(delay: 140.ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+            ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NavCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  const _NavCard({required this.icon, required this.title, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(title),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
       ),
     );
   }

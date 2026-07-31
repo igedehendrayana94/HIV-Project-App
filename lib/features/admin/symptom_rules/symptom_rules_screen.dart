@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
 import '../../../shared/async_error_view.dart';
+import '../../../shared/i18n.dart';
 
 class SymptomRule {
   final int id;
@@ -25,7 +29,7 @@ class SymptomRulesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rulesAsync = ref.watch(symptomRulesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Symptom Rules')),
+      appBar: AppBar(title: Text(AppStrings.t('symptomRules'))),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addDialog(context, ref),
         child: const Icon(Icons.add),
@@ -37,17 +41,23 @@ class SymptomRulesScreen extends ConsumerWidget {
         data: (rules) => RefreshIndicator(
           onRefresh: () => ref.refresh(symptomRulesProvider.future),
           child: ListView(
-            children: rules
-                .map((r) => SwitchListTile(
-                      title: Text(r.label),
-                      subtitle: Text(r.key),
-                      value: r.highRisk,
-                      onChanged: (v) async {
-                        await dio.patch('/admin/symptom-rules/${r.id}', data: {'highRisk': v});
-                        ref.invalidate(symptomRulesProvider);
-                      },
-                    ))
-                .toList(),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              for (final (i, r) in rules.indexed) ...[
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  child: SwitchListTile(
+                    title: Text(r.label),
+                    value: r.highRisk,
+                    onChanged: (v) async {
+                      await dio.patch('/admin/symptom-rules/${r.id}', data: {'highRisk': v});
+                      ref.invalidate(symptomRulesProvider);
+                    },
+                  ),
+                ).animate(delay: (i * 40).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+                if (i != rules.length - 1) const SizedBox(height: AppSpacing.sm),
+              ],
+            ],
           ),
         ),
       ),
@@ -63,15 +73,15 @@ class SymptomRulesScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('New Symptom Rule'),
+          title: Text(AppStrings.t('newSymptomRule')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: key, decoration: const InputDecoration(labelText: 'Key (unique, no spaces)')),
-              TextField(controller: label, decoration: const InputDecoration(labelText: 'Label')),
+              TextField(controller: key, decoration: InputDecoration(labelText: AppStrings.t('keyUniqueNoSpaces'))),
+              TextField(controller: label, decoration: InputDecoration(labelText: AppStrings.t('label'))),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('High Risk'),
+                title: Text(AppStrings.t('highRisk')),
                 value: highRisk,
                 onChanged: (v) => setState(() => highRisk = v),
               ),
@@ -79,7 +89,7 @@ class SymptomRulesScreen extends ConsumerWidget {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.t('cancel'))),
             FilledButton(
               onPressed: () async {
                 try {
@@ -94,7 +104,7 @@ class SymptomRulesScreen extends ConsumerWidget {
                   setState(() => error = apiErrorMessage(e));
                 }
               },
-              child: const Text('Add'),
+              child: Text(AppStrings.t('add')),
             ),
           ],
         ),

@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
+import '../../../shared/i18n.dart';
 import '../../../shared/risk.dart';
+import '../../../shared/risk_pill.dart';
 
 class ScreeningResultScreen extends StatelessWidget {
   final String overallRisk;
@@ -17,55 +22,62 @@ class ScreeningResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final info = riskInfo[overallRisk]!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Screening Result')),
+      appBar: AppBar(title: Text(AppStrings.t('screeningResult'))),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Card(
-            color: info.color.withValues(alpha: 0.12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${info.emoji} ${info.label}',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: info.color)),
-                  if (redFlag) ...[
-                    const SizedBox(height: 4),
-                    Text('RED FLAG', style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.bold)),
-                  ],
-                  const SizedBox(height: 12),
-                  Text(info.actions),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RiskPill(risk: overallRisk),
+                if (redFlag) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text('RED FLAG',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.bold)),
                 ],
-              ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(info.actions),
+              ],
             ),
-          ),
-          const SizedBox(height: 16),
+          ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+          const SizedBox(height: AppSpacing.lg),
           Text('Recommendations', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...info.recommendations.map((r) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [const Text('• '), Expanded(child: Text(r))],
-                ),
-              )),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.sm),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: info.recommendations
+                  .map((r) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [const Text('• '), Expanded(child: Text(r))],
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ).animate(delay: 80.ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+          const SizedBox(height: AppSpacing.lg),
           Text('Domain Scores', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...domainScores.entries.map((e) {
-            final v = e.value as Map<String, dynamic>;
-            return ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text(e.key),
-              trailing: Text('${v['tierLabel']} (${v['score']})'),
-            );
-          }),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.sm),
+          AppCard(
+            child: Column(
+              children: domainScores.entries.map((e) {
+                final v = e.value as Map<String, dynamic>;
+                return ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(e.key),
+                  trailing: Text('${v['tierLabel']} (${v['score']})'),
+                );
+              }).toList(),
+            ),
+          ).animate(delay: 140.ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+          const SizedBox(height: AppSpacing.lg),
           FilledButton(
             onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-            child: const Text('Back to Home'),
+            child: Text(AppStrings.t('backToHome')),
           ),
         ],
       ),

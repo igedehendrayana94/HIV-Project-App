@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/i18n.dart';
+import '../../../shared/password_field.dart';
 import 'users_provider.dart';
 
 // Skips the optional "link to an existing unlinked patient" convenience the web
@@ -49,53 +52,54 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      appBar: AppBar(title: Text(AppStrings.t('createAccount'))),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
+              // Identity group
               TextFormField(
                 controller: _name,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (v) => (v == null || v.isEmpty) ? 'Full Name is required' : null,
+                decoration: InputDecoration(labelText: AppStrings.t('fullName')),
+                validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('fullNameRequired') : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null,
+                decoration: InputDecoration(labelText: AppStrings.t('email')),
+                validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('emailRequired') : null,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
+              // Extra breathing room between the identity fields and the credentials group.
+              const SizedBox(height: AppSpacing.lg),
+              PasswordField(
                 controller: _password,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
-                validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters' : null,
+                labelText: AppStrings.t('password'),
+                validator: (v) => (v == null || v.length < 8) ? AppStrings.t('atLeast8Chars') : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<String>(
                 initialValue: _role,
-                decoration: const InputDecoration(labelText: 'Role'),
-                items: const [
-                  DropdownMenuItem(value: 'ADMIN', child: Text('Admin')),
-                  DropdownMenuItem(value: 'PROVIDER', child: Text('Provider')),
-                  DropdownMenuItem(value: 'PATIENT', child: Text('Patient')),
+                decoration: InputDecoration(labelText: AppStrings.t('role')),
+                items: [
+                  DropdownMenuItem(value: 'ADMIN', child: Text(AppStrings.t('roleAdmin'))),
+                  DropdownMenuItem(value: 'PROVIDER', child: Text(AppStrings.t('roleProvider'))),
+                  DropdownMenuItem(value: 'PATIENT', child: Text(AppStrings.t('rolePatient'))),
                 ],
                 onChanged: (v) => setState(() => _role = v!),
               ),
               if (_error != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               FilledButton(
                 onPressed: _saving ? null : _submit,
                 child: _saving
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Create'),
+                    : Text(AppStrings.t('create')),
               ),
             ],
           ),

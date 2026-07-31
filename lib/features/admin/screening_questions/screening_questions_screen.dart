@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
 import '../../../shared/async_error_view.dart';
+import '../../../shared/confirm_dialog.dart';
+import '../../../shared/empty_state.dart';
+import '../../../shared/i18n.dart';
 import '../../patient/screening/domains_provider.dart';
 
 class ScreeningQuestion {
@@ -30,7 +36,7 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final questionsAsync = ref.watch(screeningQuestionsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Screening Questions')),
+      appBar: AppBar(title: Text(AppStrings.t('screeningQuestions'))),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _AddQuestionScreen())),
         child: const Icon(Icons.add),
@@ -41,21 +47,56 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
             AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(screeningQuestionsProvider)),
         data: (questions) => RefreshIndicator(
           onRefresh: () => ref.refresh(screeningQuestionsProvider.future),
-          child: ListView(
-            children: questions
-                .map((q) => ListTile(
-                      title: Text(q.questionEn),
-                      subtitle: Text('${q.domainKey} · ${q.key}'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () async {
-                          await dio.delete('/admin/screening-questions/${q.id}');
-                          ref.invalidate(screeningQuestionsProvider);
-                        },
-                      ),
-                    ))
-                .toList(),
-          ),
+          child: questions.isEmpty
+              ? ListView(
+                  children: [
+                    const SizedBox(height: AppSpacing.xl),
+                    // No key covers this empty state yet — left as plain English.
+                    const EmptyState(icon: Icons.fact_check_outlined, message: 'No screening questions yet.'),
+                  ],
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  children: [
+                    for (final (i, q) in questions.indexed) ...[
+                      AppCard(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(q.questionEn, style: Theme.of(context).textTheme.titleMedium),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    '${q.domainKey} · ${q.key}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () async {
+                                final ok = await confirmAction(
+                                  context,
+                                  title: AppStrings.t('areYouSure'),
+                                  message: AppStrings.t('deleteQuestionConfirmMessage'),
+                                  confirmLabel: AppStrings.t('delete'),
+                                  destructive: true,
+                                );
+                                if (!ok) return;
+                                await dio.delete('/admin/screening-questions/${q.id}');
+                                ref.invalidate(screeningQuestionsProvider);
+                              },
+                            ),
+                          ],
+                        ),
+                      ).animate(delay: (i * 40).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+                      if (i != questions.length - 1) const SizedBox(height: AppSpacing.sm),
+                    ],
+                  ],
+                ),
         ),
       ),
     );
@@ -85,6 +126,7 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _domainKey == null) {
+      // No i18n key exists for this validation message — left as plain English.
       setState(() => _error = _domainKey == null ? 'Domain is required' : null);
       return;
     }
@@ -117,76 +159,77 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
   Widget build(BuildContext context) {
     final domainsAsync = ref.watch(domainsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('New Screening Question')),
+      appBar: AppBar(title: Text(AppStrings.t('newScreeningQuestion'))),
       body: domainsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(domainsProvider)),
         data: (domains) => Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Form(
             key: _formKey,
             child: ListView(
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: _domainKey,
-                  decoration: const InputDecoration(labelText: 'Domain'),
+                  decoration: InputDecoration(labelText: AppStrings.t('domain')),
                   items: domains.map((d) => DropdownMenuItem(value: d.key, child: Text(d.label.text))).toList(),
                   onChanged: (v) => setState(() => _domainKey = v),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 TextFormField(
                   controller: _key,
-                  decoration: const InputDecoration(labelText: 'Key (unique, no spaces)'),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Key is required' : null,
+                  decoration: InputDecoration(labelText: AppStrings.t('keyUniqueNoSpaces')),
+                  validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('keyRequired') : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 TextFormField(
                   controller: _questionEn,
-                  decoration: const InputDecoration(labelText: 'Question (English)'),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  decoration: InputDecoration(labelText: AppStrings.t('questionEnglish')),
+                  validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 TextFormField(
                   controller: _questionId,
-                  decoration: const InputDecoration(labelText: 'Question (Bahasa Indonesia)'),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  decoration: InputDecoration(labelText: AppStrings.t('questionIndonesian')),
+                  validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
+                // No i18n key exists for this section label — left as plain English.
                 Text('Severity 1-4 options', style: Theme.of(context).textTheme.titleSmall),
                 for (var i = 0; i < 4; i++)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
                     child: Row(
                       children: [
                         Text('${i + 1}. '),
                         Expanded(
                           child: TextFormField(
                             controller: _labelsEn[i],
-                            decoration: const InputDecoration(labelText: 'Label (EN)'),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                            decoration: InputDecoration(labelText: AppStrings.t('labelEn')),
+                            validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: TextFormField(
                             controller: _labelsId[i],
-                            decoration: const InputDecoration(labelText: 'Label (ID)'),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                            decoration: InputDecoration(labelText: AppStrings.t('labelId')),
+                            validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                           ),
                         ),
                       ],
                     ),
                   ),
                 if (_error != null) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.lg),
                 FilledButton(
                   onPressed: _saving ? null : _submit,
                   child: _saving
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Add Question'),
+                      : Text(AppStrings.t('addQuestion')),
                 ),
               ],
             ),

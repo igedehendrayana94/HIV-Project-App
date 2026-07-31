@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
+import '../../../shared/i18n.dart';
 
 class ChatMessage {
   final String role; // "USER" | "ASSISTANT"
@@ -106,25 +109,25 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Chatbot')),
+      appBar: AppBar(title: Text(AppStrings.t('aiChatbot'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 if (_escalated)
-                  Container(
-                    width: double.infinity,
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      _consultationId != null
-                          ? 'Escalated to a live consultation (#$_consultationId) — a provider will respond there.'
-                          : 'This chat has ended.',
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+                    child: AppCard(
+                      child: Text(
+                        _consultationId != null
+                            ? AppStrings.escalatedToConsultation(_consultationId!)
+                            : AppStrings.t('chatEnded'),
+                      ),
                     ),
                   ),
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
                     itemCount: _messages.length,
                     itemBuilder: (context, i) {
                       final m = _messages[i];
@@ -152,42 +155,42 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 if (_pending != null)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('The assistant suggests talking to a provider (${_pending!.urgency}).'),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                FilledButton(onPressed: _sending ? null : _confirmEscalation, child: const Text('Yes, connect me')),
-                                const SizedBox(width: 8),
-                                TextButton(onPressed: () => setState(() => _pending = null), child: const Text('Not now')),
-                              ],
-                            ),
-                          ],
-                        ),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    child: AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(AppStrings.assistantSuggestsProvider(_pending!.urgency)),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              FilledButton(
+                                  onPressed: _sending ? null : _confirmEscalation,
+                                  child: Text(AppStrings.t('yesConnectMe'))),
+                              const SizedBox(width: AppSpacing.sm),
+                              TextButton(
+                                  onPressed: () => setState(() => _pending = null), child: Text(AppStrings.t('notNow'))),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 if (_error != null)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                     child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   ),
                 SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
                     child: Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: _input,
                             enabled: !_escalated,
-                            decoration: const InputDecoration(hintText: 'Type a message…'),
+                            decoration: InputDecoration(hintText: AppStrings.t('typeMessage')),
                             onSubmitted: (_) => _send(),
                           ),
                         ),

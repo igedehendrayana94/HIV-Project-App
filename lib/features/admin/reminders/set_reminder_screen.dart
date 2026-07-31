@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/i18n.dart';
 
 class SetReminderScreen extends StatefulWidget {
   final int patientId;
@@ -44,6 +46,7 @@ class _SetReminderScreenState extends State<SetReminderScreen> {
 
   Future<void> _save() async {
     if (_times.text.trim().isEmpty) {
+      // No i18n key exists for this validation message — left as plain English.
       setState(() => _error = 'Reminder times are required');
       return;
     }
@@ -71,31 +74,34 @@ class _SetReminderScreenState extends State<SetReminderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Reminder — ${widget.patientName}')),
+      appBar: AppBar(title: Text('${AppStrings.t('reminderFor')} ${widget.patientName}')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: ListView(
                 children: [
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Active'),
+                    title: Text(AppStrings.t('active')),
                     value: _active,
                     onChanged: (v) => setState(() => _active = v),
                   ),
+                  // Extra breathing room between the on/off toggle and the schedule fields.
+                  const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: _times,
-                    decoration: const InputDecoration(labelText: 'Times (e.g. 08:00, 20:00)'),
+                    decoration: InputDecoration(labelText: AppStrings.t('timesLabel')),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   TextField(
                     controller: _notes,
-                    decoration: const InputDecoration(labelText: 'Notes (optional)'),
+                    decoration: InputDecoration(labelText: AppStrings.t('notesOptional')),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
+                    // No i18n key exists for this label — left as plain English.
                     title: Text(_startDate == null
                         ? 'Effective From (optional)'
                         : _startDate!.toIso8601String().split('T').first),
@@ -111,15 +117,15 @@ class _SetReminderScreenState extends State<SetReminderScreen> {
                     },
                   ),
                   if (_error != null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
                     Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   ],
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
                   FilledButton(
                     onPressed: _saving ? null : _save,
                     child: _saving
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Save'),
+                        : Text(AppStrings.t('save')),
                   ),
                 ],
               ),

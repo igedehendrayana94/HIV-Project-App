@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
+import '../../../shared/i18n.dart';
 
 // Mirrors RegisterPatientForm.tsx (web) — POST /api/patients links the new Patient row to
 // the caller's own account for a PATIENT session. A newly-approved patient account has no
@@ -9,7 +13,12 @@ import '../../../core/api_client.dart';
 // Flutter without adding a package — defaults to Asia/Jakarta (this project's locale) as an
 // editable field instead; add device-timezone detection if that default proves wrong often.
 class RegisterPatientScreen extends StatefulWidget {
-  const RegisterPatientScreen({super.key});
+  // POST /api/patients auto-links to the caller's own account only for a PATIENT session;
+  // Provider/Admin get a plain unlinked registration — same endpoint, backend branches on
+  // role, only the title needs to read differently here.
+  final String title;
+
+  const RegisterPatientScreen({super.key, this.title = 'Register as Patient'});
 
   @override
   State<RegisterPatientScreen> createState() => _RegisterPatientScreenState();
@@ -65,53 +74,60 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register as Patient')),
+      appBar: AppBar(title: Text(widget.title)),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (v) => (v == null || v.isEmpty) ? 'Full Name is required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email (optional)'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone (optional)'),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(_dob == null ? 'Date of Birth' : _dob!.toIso8601String().split('T').first),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: _pickDob,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _timezone,
-                decoration: const InputDecoration(labelText: 'Timezone (IANA, e.g. Asia/Jakarta)'),
-                validator: (v) => (v == null || v.isEmpty) ? 'Timezone is required' : null,
-              ),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _name,
+                      decoration: InputDecoration(labelText: AppStrings.t('fullName')),
+                      validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('fullNameRequired') : null,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(labelText: AppStrings.t('emailOptional')),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _phone,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(labelText: AppStrings.t('phoneOptional')),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(_dob == null ? 'Date of Birth' : _dob!.toIso8601String().split('T').first),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: _pickDob,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _timezone,
+                      decoration: InputDecoration(labelText: AppStrings.t('timezoneHint')),
+                      validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('timezoneRequired') : null,
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
               if (_error != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               FilledButton(
                 onPressed: _saving ? null : _submit,
                 child: _saving
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Register'),
+                    : Text(AppStrings.t('register')),
               ),
             ],
           ),

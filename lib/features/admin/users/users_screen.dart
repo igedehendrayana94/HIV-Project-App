@@ -1,19 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/auth_state.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
 import '../../../shared/async_error_view.dart';
+import '../../../shared/confirm_dialog.dart';
+import '../../../shared/empty_state.dart';
+import '../../../shared/i18n.dart';
 import 'create_user_screen.dart';
 import 'models.dart';
 import 'users_provider.dart';
 
-class UsersScreen extends ConsumerWidget {
+class UsersScreen extends ConsumerStatefulWidget {
   const UsersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UsersScreen> createState() => _UsersScreenState();
+}
+
+class _UsersScreenState extends ConsumerState<UsersScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final usersAsync = ref.watch(adminUsersProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Users')),
+      appBar: AppBar(title: Text(AppStrings.t('users'))),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CreateUserScreen())),
         child: const Icon(Icons.add),
@@ -23,18 +43,61 @@ class UsersScreen extends ConsumerWidget {
         error: (e, _) =>
             AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(adminUsersProvider)),
         data: (users) {
-          final pending = users.where((u) => u.status != 'APPROVED').toList();
-          final approved = users.where((u) => u.status == 'APPROVED').toList();
+          if (users.isEmpty) {
+            return RefreshIndicator(
+              onRefresh: () => ref.refresh(adminUsersProvider.future),
+              child: ListView(
+                children: [
+                  const SizedBox(height: AppSpacing.xl),
+                  // No key covers this empty state yet — left as plain English.
+                  const EmptyState(icon: Icons.people_outline, message: 'No users yet.'),
+                ],
+              ),
+            );
+          }
+          final q = _query.trim().toLowerCase();
+          final filtered = q.isEmpty
+              ? users
+              : users
+                  .where((u) => u.name.toLowerCase().contains(q) || u.email.toLowerCase().contains(q))
+                  .toList();
+          final pending = filtered.where((u) => u.status != 'APPROVED').toList();
+          final approved = filtered.where((u) => u.status == 'APPROVED').toList();
           return RefreshIndicator(
             onRefresh: () => ref.refresh(adminUsersProvider.future),
             child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                if (pending.isNotEmpty) ...[
-                  const _SectionHeader('Pending / Rejected'),
-                  ...pending.map((u) => _UserRow(user: u)),
+                // No i18n key for a users search hint — left as a plain English literal.
+                TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(labelText: 'Search by name or email'),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                if (filtered.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: AppSpacing.xl),
+                    child: EmptyState(icon: Icons.search_off, message: 'No users match your search.'),
+                  )
+                else ...[
+                  if (pending.isNotEmpty) ...[
+                    // No i18n keys exist for these section headers — left as plain English.
+                    const _SectionHeader('Pending / Rejected'),
+                    for (final u in pending) ...[
+                      _UserRow(user: u),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+                  if (approved.isNotEmpty) ...[
+                    const _SectionHeader('Approved'),
+                    for (final u in approved) ...[
+                      _UserRow(user: u),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                  ],
                 ],
-                const _SectionHeader('Approved'),
-                ...approved.map((u) => _UserRow(user: u)),
               ],
             ),
           );
@@ -51,7 +114,7 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, AppSpacing.sm),
       child: Text(title, style: Theme.of(context).textTheme.titleSmall),
     );
   }
@@ -88,7 +151,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit User'),
+        title: Text(AppStrings.t('editUser')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -97,7 +160,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppStrings.t('cancel'))),
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
@@ -106,7 +169,7 @@ class _UserRowState extends ConsumerState<_UserRow> {
                     'email': email.text.trim(),
                   }));
             },
-            child: const Text('Save'),
+            child: Text(AppStrings.t('save')),
           ),
         ],
       ),
@@ -116,31 +179,62 @@ class _UserRowState extends ConsumerState<_UserRow> {
   @override
   Widget build(BuildContext context) {
     final u = widget.user;
-    return ListTile(
-      title: Text(u.name),
-      subtitle: Text('${u.email} · ${u.role} · ${u.status}'),
-      trailing: _busy
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-          : PopupMenuButton<String>(
-              onSelected: (v) {
-                switch (v) {
-                  case 'approve':
-                    _act(() => dio.post('/admin/users/${u.id}/approve'));
-                  case 'reject':
-                    _act(() => dio.post('/admin/users/${u.id}/reject'));
-                  case 'edit':
-                    _editDialog();
-                  case 'delete':
-                    _act(() => dio.delete('/admin/users/${u.id}'));
-                }
-              },
-              itemBuilder: (context) => [
-                if (u.status != 'APPROVED') const PopupMenuItem(value: 'approve', child: Text('Approve')),
-                if (u.status == 'PENDING') const PopupMenuItem(value: 'reject', child: Text('Reject')),
-                const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+    // Admin's PATCH /admin/users/[id] is self-only now (2026-07-31 policy change) — editing
+    // another user's name/email/password is a 403 server-side, so the Edit action only makes
+    // sense (and only appears) on the admin's own row. Everyone else's row is view-only plus
+    // Approve/Reject/Delete, which are separate status/removal actions, not edits.
+    final isSelf = u.id == ref.watch(authProvider).value?.userId;
+    return AppCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(u.name, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${u.email} · ${u.role} · ${u.status}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
+          ),
+          _busy
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : PopupMenuButton<String>(
+                  onSelected: (v) async {
+                    switch (v) {
+                      case 'approve':
+                        _act(() => dio.post('/admin/users/${u.id}/approve'));
+                      case 'reject':
+                        _act(() => dio.post('/admin/users/${u.id}/reject'));
+                      case 'edit':
+                        _editDialog();
+                      case 'delete':
+                        final ok = await confirmAction(
+                          context,
+                          title: AppStrings.t('areYouSure'),
+                          message: AppStrings.t('deleteAccountConfirmMessage'),
+                          confirmLabel: AppStrings.t('delete'),
+                          destructive: true,
+                        );
+                        if (ok) _act(() => dio.delete('/admin/users/${u.id}'));
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (u.status != 'APPROVED')
+                      PopupMenuItem(value: 'approve', child: Text(AppStrings.t('approve'))),
+                    if (u.status == 'PENDING')
+                      PopupMenuItem(value: 'reject', child: Text(AppStrings.t('reject'))),
+                    if (isSelf)
+                      PopupMenuItem(value: 'edit', child: Text(AppStrings.t('edit')))
+                    else
+                      PopupMenuItem(value: 'delete', child: Text(AppStrings.t('delete'))),
+                  ],
+                ),
+        ],
+      ),
     );
   }
 }

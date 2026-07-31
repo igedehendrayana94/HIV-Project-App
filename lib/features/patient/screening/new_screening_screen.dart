@@ -1,27 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/app_card.dart';
 import '../../../shared/async_error_view.dart';
+import '../../../shared/i18n.dart';
 import 'domains_provider.dart';
 import 'models.dart';
 import 'result_screen.dart';
 
+// One domain per step (PageView + Next/Back), not one long scrollable list of 6 accordions —
+// the original ExpansionTile-per-domain layout let a patient reach the submit button without
+// ever opening several domains, and made the form read as a wall of collapsed sections up
+// front. A guided step-by-step flow matches this app's "calm health app" reference class
+// (Headspace/Calm-style onboarding pacing) better than a dense settings-style list.
+// Scoring/submission logic (_answers, _answerFor, _submit) is completely unchanged from the
+// previous version — only the navigation shell around it changed.
 class NewScreeningScreen extends ConsumerStatefulWidget {
-  const NewScreeningScreen({super.key});
+  final int? patientId;
+  final String? patientName;
+
+  const NewScreeningScreen({super.key, this.patientId, this.patientName});
 
   @override
   ConsumerState<NewScreeningScreen> createState() => _NewScreeningScreenState();
 }
 
 class _NewScreeningScreenState extends ConsumerState<NewScreeningScreen> {
-  // domainKey -> symptomKey -> answer — mirrors the Answers type POST /api/screening expects.
   final Map<String, Map<String, SymptomAnswer>> _answers = {};
+  final _pageController = PageController();
+  int _page = 0;
   bool _submitting = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   SymptomAnswer _answerFor(String domainKey, String symptomKey) {
     final domainAnswers = _answers.putIfAbsent(domainKey, () => {});
     return domainAnswers.putIfAbsent(symptomKey, () => SymptomAnswer());
+  }
+
+  void _goNext(int domainCount) {
+    if (_page < domainCount - 1) {
+      setState(() => _page++);
+      _pageController.nextPage(duration: 250.ms, curve: Curves.easeOut);
+    } else {
+      _submit();
+    }
+  }
+
+  void _goBack() {
+    if (_page == 0) return;
+    setState(() => _page--);
+    _pageController.previousPage(duration: 250.ms, curve: Curves.easeOut);
   }
 
   Future<void> _submit() async {
@@ -37,7 +73,10 @@ class _NewScreeningScreenState extends ConsumerState<NewScreeningScreen> {
         },
     };
     try {
-      final res = await dio.post('/screening', data: {'answers': answersJson});
+      final res = await dio.post('/screening', data: {
+        'answers': answersJson,
+        if (widget.patientId != null) 'patientId': widget.patientId,
+      });
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -59,58 +98,101 @@ class _NewScreeningScreenState extends ConsumerState<NewScreeningScreen> {
   Widget build(BuildContext context) {
     final domainsAsync = ref.watch(domainsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('New Screening')),
+      appBar: AppBar(
+        title: Text(widget.patientName == null
+            ? AppStrings.t('newScreening')
+            : '${AppStrings.t('newScreening')} — ${widget.patientName}'),
+      ),
       body: domainsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(domainsProvider)),
-        data: (domains) => Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: domains.map((domain) => _DomainSection(
-                      domain: domain,
-                      answerFor: _answerFor,
-                      onChanged: () => setState(() {}),
-                    )).toList(),
-              ),
-            ),
-            if (_error != null)
+        data: (domains) {
+          final domain = domains[_page];
+          final isLast = _page == domains.length - 1;
+          return Column(
+            children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: (_page + 1) / domains.length,
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      domain.label.text,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
               ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Submit Screening'),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: domains.length,
+                  itemBuilder: (context, i) {
+                    final d = domains[i];
+                    return ListView(
+                      key: ValueKey(d.key),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      children: [
+                        AppCard(
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            children: d.symptoms.map((symptom) {
+                              final answer = _answerFor(d.key, symptom.key);
+                              return _SymptomTile(
+                                symptom: symptom,
+                                answer: answer,
+                                onChanged: () => setState(() {}),
+                              );
+                            }).toList(),
+                          ),
+                        ).animate().fadeIn(duration: 250.ms).slideY(begin: 0.04, end: 0),
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
-        ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    if (_page > 0) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _submitting ? null : _goBack,
+                          child: Text(AppStrings.t('back')),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                    ],
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _submitting ? null : () => _goNext(domains.length),
+                        child: _submitting
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : Text(isLast ? AppStrings.t('submitScreening') : AppStrings.t('next')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
-    );
-  }
-}
-
-class _DomainSection extends StatelessWidget {
-  final Domain domain;
-  final SymptomAnswer Function(String domainKey, String symptomKey) answerFor;
-  final VoidCallback onChanged;
-
-  const _DomainSection({required this.domain, required this.answerFor, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return ExpansionTile(
-      title: Text(domain.label.text, style: const TextStyle(fontWeight: FontWeight.w600)),
-      children: domain.symptoms.map((symptom) {
-        final answer = answerFor(domain.key, symptom.key);
-        return _SymptomTile(symptom: symptom, answer: answer, onChanged: onChanged);
-      }).toList(),
     );
   }
 }
@@ -145,7 +227,7 @@ class _SymptomTileState extends State<_SymptomTile> {
         ),
         if (widget.answer.stage1)
           Padding(
-            padding: const EdgeInsets.only(left: 32, right: 16, bottom: 8),
+            padding: const EdgeInsets.only(left: AppSpacing.xl, right: AppSpacing.md, bottom: AppSpacing.sm),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: widget.symptom.stage2Options.map((opt) {

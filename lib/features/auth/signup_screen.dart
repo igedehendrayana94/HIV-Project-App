@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../shared/i18n.dart';
+import '../../shared/password_field.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -55,6 +56,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Image.asset('assets/branding/logo.png', width: 72, height: 72),
+                    const SizedBox(height: 16),
                     Text(
                       AppStrings.t('signup'),
                       textAlign: TextAlign.center,
@@ -74,14 +77,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('email') : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    PasswordField(
                       controller: _password,
-                      obscureText: true,
-                      decoration: InputDecoration(labelText: AppStrings.t('password')),
+                      labelText: AppStrings.t('password'),
                       // matches the backend's own minimum (api/auth/signup) so the error
                       // surfaces before a round trip instead of only after
                       validator: (v) =>
-                          (v == null || v.length < 8) ? 'Password must be at least 8 characters' : null,
+                          (v == null || v.length < 8) ? AppStrings.t('passwordMinLength') : null,
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 16),

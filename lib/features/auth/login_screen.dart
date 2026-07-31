@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../shared/i18n.dart';
+import '../../shared/password_field.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -49,6 +50,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Image.asset('assets/branding/logo.png', width: 88, height: 88),
+                    const SizedBox(height: 16),
                     Text(
                       AppStrings.t('appName'),
                       textAlign: TextAlign.center,
@@ -62,10 +65,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('email') : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    PasswordField(
                       controller: _password,
-                      obscureText: true,
-                      decoration: InputDecoration(labelText: AppStrings.t('password')),
+                      labelText: AppStrings.t('password'),
                       validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('password') : null,
                     ),
                     if (_error != null) ...[

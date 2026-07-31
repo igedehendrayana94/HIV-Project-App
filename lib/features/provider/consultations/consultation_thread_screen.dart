@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/api_client.dart';
+import '../../../core/theme.dart';
+import '../../../shared/i18n.dart';
 import '../patient/patient_detail_screen.dart';
 import 'models.dart';
 
@@ -123,21 +125,21 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
                 Container(
                   width: double.infinity,
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Status: $_status'),
+                      Text('${AppStrings.t('status')}: $_status'),
                       if (_status == 'OPEN')
-                        FilledButton(onPressed: _busy ? null : _claim, child: const Text('Claim'))
+                        FilledButton(onPressed: _busy ? null : _claim, child: Text(AppStrings.t('claim')))
                       else if (_status == 'IN_REVIEW')
-                        OutlinedButton(onPressed: _busy ? null : _resolve, child: const Text('Mark Resolved')),
+                        OutlinedButton(onPressed: _busy ? null : _resolve, child: Text(AppStrings.t('markResolved'))),
                     ],
                   ),
                 ),
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     itemCount: _messages.length,
                     itemBuilder: (context, i) {
                       final m = _messages[i];
@@ -145,8 +147,8 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
                       return Align(
                         alignment: isProvider ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.all(10),
+                          margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                           decoration: BoxDecoration(
                             color: isProvider
@@ -159,11 +161,9 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
                             children: [
                               if (m.senderName != null)
                                 Text(m.senderName!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: isProvider ? Theme.of(context).colorScheme.onPrimary : null,
-                                    )),
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                                          color: isProvider ? Theme.of(context).colorScheme.onPrimary : null,
+                                        )),
                               Text(m.content, style: TextStyle(color: isProvider ? Theme.of(context).colorScheme.onPrimary : null)),
                             ],
                           ),
@@ -174,19 +174,19 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
                 ),
                 if (_error != null)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                     child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   ),
                 SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
                     child: Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: _input,
                             enabled: _status != 'RESOLVED',
-                            decoration: const InputDecoration(hintText: 'Type a message…'),
+                            decoration: InputDecoration(hintText: AppStrings.t('typeMessage')),
                             onSubmitted: (_) => _send(),
                           ),
                         ),

@@ -3,4 +3,5 @@
     <!-- Matches appTheme's seed color (lib/core/theme.dart) — the launch screen's background
          while the Flutter engine starts, before any Dart code (and its real theme) runs. -->
     <color name="launch_background">#0D9488</color>
+	<color name="ic_launcher_background">#F38181</color>
 </resources>

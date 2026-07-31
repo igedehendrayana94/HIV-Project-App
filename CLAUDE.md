@@ -8,16 +8,21 @@ This file provides guidance to Claude Code when working with code in this reposi
 - **Purpose:** Native Flutter client for all three roles (ADMIN, PROVIDER, PATIENT), backed by the same Postgres/Prisma data as `HIV-Project-Web` — not a WebView wrapper.
 - **Backend:** `HIV-Project-Web`'s Next.js API routes (`https://hiv-project-web.vercel.app/api`), reused as-is. Auth is Bearer-token (vs. the web app's httpOnly cookie) — see "Mobile integration" in `HIV-Project-Web/CLAUDE.md`.
 - **Package/org:** `com.medicarehiv.hiv_project_app`
-- **Status:** All 5 planned phases done — Patient, Provider, and Admin roles built and polished, backed by the shared `HIV-Project-Web` backend. Real device/emulator testing is the remaining open item (not possible from this dev machine).
+- **Status:** All 5 original build phases done, plus a full UI/UX redesign (2026-07-31) — bold vibrant theme, persistent bottom-nav, real animation, EN/ID toggle, search/filter, confirm dialogs. Verified live on the iOS Simulator (see Environment note below — the "no CocoaPods" constraint no longer holds).
 - **Owner:** igedehendrayana94
 - **Full phased build plan:** `~/.claude/plans/typed-plotting-hearth.md`
 
 ## Environment constraints (this dev machine)
 
-`flutter doctor`: no Android SDK, incomplete Xcode (no CocoaPods) — only macOS-desktop and
-Chrome-web targets work here. `flutter analyze` + `flutter build web` are the practical
-verification ceiling from this CLI; a real device/emulator walkthrough is a manual step for
-the user once available.
+As of 2026-07-31: full Xcode + CocoaPods now available — `flutter run -d <simulator-udid>`
+against a booted iOS Simulator works end-to-end (build, install, launch, hot restart), and
+this is now the actual verification method used, not just `flutter analyze`/`flutter build
+web`. (Earlier note below is now stale but kept for history: no Android SDK still applies —
+Android builds/emulators remain unverified from this machine.) UI automation (scripted
+tap/type into the simulator) is NOT reliably available — `osascript`/System Events clicks
+get intercepted by the host IDE's own overlay window regardless of Accessibility permissions;
+manual login/click-through by the user is required to test interactive flows beyond static
+screens.
 
 ## Architecture
 
@@ -29,9 +34,34 @@ the user once available.
 - **Routing:** `go_router`, `lib/core/router.dart` — redirect rules reimplement
   `HIV-Project-Web/src/proxy.ts`'s role gating client-side (no middleware layer in Flutter).
 - **i18n:** `lib/shared/i18n.dart` mirrors `HIV-Project-Web/src/lib/i18n.ts`'s
-  `{ key: { en, id } }` dictionary shape by hand — no ARB/gen-l10n toolchain.
+  `{ key: { en, id } }` dictionary shape by hand — no ARB/gen-l10n toolchain. `AppStrings.locale`
+  (static, default `AppLocale.id`) is kept in sync with `lib/core/locale_state.dart`'s
+  `localeProvider` (Riverpod `Notifier`, persisted via `shared_preferences`) — screens read
+  `AppStrings.t('key')` directly, the provider exists for reactivity + persistence.
 - **API base URL:** defaults to the production web app; override locally with
   `flutter run --dart-define=API_BASE_URL=http://localhost:3000/api`.
+- **Design system** (`lib/core/theme.dart`, redesigned 2026-07-31): `AppSpacing`
+  (xs/sm/md/lg/xl = 4/8/16/24/32, 8pt grid) and `AppRadius` (card=20, button/chip=999) are the
+  only sanctioned spacing/radius constants — never raw numbers. Bold vibrant palette
+  (`kVibrantPrimary` = `#C2185B`, 5.87:1 contrast vs white, audited) drives every primary
+  surface as a flat solid fill, not a tonal tint; `kBrandSoft`/`kBrandSoftAlt` (the original
+  D68888/BF8080 pink pair) survive as decorative/secondary accents only.
+  `ThemeData.pageTransitionsTheme` is overridden app-wide with a custom slide-up+fade
+  transition — every `Navigator.push`/route change gets this automatically, no per-screen work.
+- **Shared widgets** (`lib/shared/`): `AppCard` (soft rounded surface, wraps tappable content in
+  `Bouncy` for spring-scale press feedback), `EmptyState` (icon+message+optional CTA, replaces
+  bare "No X yet." text), `RiskPill` (one canonical risk-level chip, was duplicated 3 ways),
+  `LiveDot` (pulsing indicator for actively-polling screens), `SkeletonList` (shimmer loading
+  placeholder), `AmbientGlow` (slow animated radial-gradient blobs behind home-tab content,
+  mirrors the web landing page's `HeroGlow`), `PasswordField` (show/hide eye toggle, mirrors
+  web's `PasswordInput.tsx`), `confirm_dialog.dart`'s `confirmAction()` (shared
+  are-you-sure dialog — logout and every destructive action route through this).
+- **Navigation shell** (`lib/core/router.dart` + `lib/features/{patient,provider,admin}/*_shell.dart`):
+  `StatefulShellRoute.indexedStack` per role gives each role a persistent bottom `NavigationBar`
+  (replaced the old flat `/home` route + push-only hub pattern). Each role's home screen
+  (`*_home_screen.dart`) is now just one tab among several, kept only for lower-frequency
+  destinations; deeper screens still use plain `Navigator.push` inside a branch's own stack —
+  no full conversion to named nested routes was needed.
 
 ## Progress Log
 
@@ -128,3 +158,71 @@ the user once available.
   generate one from; add via `flutter_launcher_icons` once a design exists.
   `flutter analyze` clean (same two pre-existing infos), `flutter build web` succeeds, widget
   test passes.
+- 2026-07-31: **Real app icon + branding.** User supplied a real logo (`HIV-Project-Src/Medi-Care
+  HIV.png`) — generated via `flutter_launcher_icons` for iOS (flattened to an opaque square,
+  since iOS icons can't have transparency/pre-baked rounding — iOS masks the corners itself)
+  and Android (adaptive icon, transparent foreground + `#F38181` background matching the
+  logo's own bg color). Also added the logo as an in-app asset (`assets/branding/logo.png`,
+  shown above the title on login/signup).
+- 2026-07-31: **Security — old/new/confirm password flow.** Root-cause fix for a recurring
+  production incident (`AccountScreen`'s "Change password" toggle sent whatever was in the
+  password field on save, including autofill-populated-but-never-typed values). Toggle alone
+  wasn't enough — a stolen/left-open session could still silently change the password with no
+  proof of identity. `PATCH /api/account` (shared by this app and `HIV-Project-Web`'s
+  Preferences page) now requires `oldPassword`, verified server-side via `bcrypt.compare`
+  before any new password is accepted; both clients collect Current/New/Confirm-New instead
+  of one field. See `HIV-Project-Web/CLAUDE.md` for the backend side.
+- 2026-07-31: **Full UI/UX redesign — "calm health app" then "bold vibrant" (Duolingo/Cash
+  App).** Client feedback (via the user) was that the app looked generic/old-school;
+  first pass (soft pastel D68888 theme, subtle motion) still read as "too simple, low
+  contrast" on real review, so the palette was pushed to a saturated, AA-audited primary
+  (`#C2185B`) with solid fills and true black/white text instead of muted tonal containers —
+  see the Architecture section above for the resulting design-system shape. Delivered in
+  phases (plan file: `~/.claude/plans/reactive-mixing-cupcake.md`):
+  - **Phase 0** — design system foundation (`theme.dart`, `AppSpacing`/`AppRadius`, the shared
+    widget set, `flutter_animate` dependency added).
+  - **Phase 1** — navigation shell rewrite (`StatefulShellRoute.indexedStack` per role,
+    persistent bottom nav, old `role_home_screen.dart` dispatcher deleted as dead code).
+  - **Phase 2** — visual reskin of all ~30 screens (parallelized across 3 background agents,
+    one per role, after Phase 0/1 landed — zero merge conflicts since each agent owned a
+    disjoint set of files and was instructed not to edit the shared `i18n.dart`).
+  - **Phase 3** — form friction reduction: `new_screening_screen.dart` rebuilt from one long
+    `ExpansionTile`-per-domain list into a `PageView` stepper (one domain per step, progress
+    bar, Next/Back, last step submits directly — no separate review page, a deliberate scope
+    cut). Scoring/submission logic untouched.
+  - **Phase 4** — real-time feel: consultations inbox now polls every 8s (silent, matches the
+    web app's own `ConsultationQueue.tsx` interval) with a `LiveDot` indicator, extending the
+    `Timer.periodic(silent:true)` pattern that previously only existed on the consultation
+    thread screen.
+  - **Phase 5** — finished i18n wiring (the dictionary in `lib/shared/i18n.dart` grew from ~10
+    keys to ~130 this session) into every screen touched during the reskin, in the same pass
+    rather than a second sweep.
+  - **Phase 6 + follow-ups** — `flutter analyze` clean throughout, verified live on the iOS
+    Simulator after each phase. Follow-up fixes from real user review: `AppCard`'s default
+    padding bumped from `AppSpacing.md` (16) to `lg` (24) after a real "text overlapping the
+    card border" bug — the card's 20px corner radius was bigger than its padding, so content
+    near the top-left corner visually clipped into the rounding; symptom-rules screen's raw
+    internal `key` subtitle (e.g. `breathing_difficulty` under "Breathing Difficulty") was
+    hidden per user request — a legitimate admin-debugging aid, not a translation bug, but
+    the user wanted a cleaner look; added a password show/hide eye toggle
+    (`lib/shared/password_field.dart`, mirrors web's `PasswordInput.tsx`) to all 4 password
+    fields app-wide (login, signup, create-user, account — the gap was real: there was
+    previously no way to check a typo'd password before submitting); added `confirmAction()`
+    (`lib/shared/confirm_dialog.dart`) before logout and every destructive action
+    (delete account, delete screening question, reject a consultation).
+- 2026-07-31: **Front-end↔back-end connection audit.** Systematically inventoried every
+  `dio.*` call in this app against the actual `HIV-Project-Web` route handlers (auth header
+  format, response shapes, required params). Found the Bearer-token handshake, `patients/me`
+  session-resolution, and every response shape already matched correctly — one real gap:
+  `POST /consultations/[id]/reject` existed on the backend (an unclaimed-OPEN-only atomic
+  guard) but had no Flutter caller at all, so a provider/admin on mobile could Claim but never
+  Reject an unclaimed request. Added a Reject button (`Icons.close`, only shown when
+  `assignedProviderName == null && status == 'OPEN'`, matching the backend's own guard) to
+  `consultations_inbox_screen.dart`'s row widget.
+- 2026-07-31: **Search/filter.** Added to the highest-traffic list screens (parallelized in a
+  background agent alongside a matching pass on `HIV-Project-Web`, since the two repos share
+  zero files): Admin Users (name/email search), Consultations inbox (urgency `ChoiceChip`
+  filter — All/Emergency/Urgent/Routine, composes with the existing 8s poll and the new Reject
+  action), both patient-picker screens (name search), Screening History (risk-level
+  `ChoiceChip` filter). All client-side filtering of the already-fetched list — no new API
+  calls, no pagination added.

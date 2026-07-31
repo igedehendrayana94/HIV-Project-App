@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../shared/async_error_view.dart';
-import '../../../shared/risk.dart';
+import '../../../shared/risk_pill.dart';
 import '../../patient/screening/models.dart';
 
 final _patientProvider = FutureProvider.family<Map<String, dynamic>, int>((ref, patientId) async {
@@ -63,14 +63,16 @@ class PatientDetailScreen extends ConsumerWidget {
                     if (assessments.isEmpty) return const Text('No screenings yet.');
                     return Column(
                       children: assessments.map((a) {
-                        final info = riskInfo[a.overallRisk]!;
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text('${info.emoji} ${info.label}'),
+                          title: RiskPill(risk: a.overallRisk),
                           subtitle: Text(a.createdAt.toLocal().toString()),
                           trailing: a.redFlag
                               ? Text('RED FLAG',
-                                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall!
+                                      .copyWith(color: Theme.of(context).colorScheme.error))
                               : null,
                         );
                       }).toList(),
