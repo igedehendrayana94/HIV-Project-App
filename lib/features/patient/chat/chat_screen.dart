@@ -162,12 +162,14 @@ class _ChatScreenState extends State<ChatScreen> {
                         children: [
                           Text(AppStrings.assistantSuggestsProvider(_pending!.urgency)),
                           const SizedBox(height: AppSpacing.sm),
-                          Row(
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.xs,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               FilledButton(
                                   onPressed: _sending ? null : _confirmEscalation,
                                   child: Text(AppStrings.t('yesConnectMe'))),
-                              const SizedBox(width: AppSpacing.sm),
                               TextButton(
                                   onPressed: () => setState(() => _pending = null), child: Text(AppStrings.t('notNow'))),
                             ],
