@@ -166,7 +166,7 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'language': {AppLocale.en: 'Language', AppLocale.id: 'Bahasa'},
 
   // Patient — Chat
-  'aiChatbot': {AppLocale.en: 'AI Chatbot', AppLocale.id: 'Chatbot AI'},
+  'aiChatbot': {AppLocale.en: 'Live Consultations', AppLocale.id: 'Konsultasi Langsung'},
   'yesConnectMe': {AppLocale.en: 'Yes, connect me', AppLocale.id: 'Ya, hubungkan saya'},
   'notNow': {AppLocale.en: 'Not now', AppLocale.id: 'Tidak sekarang'},
 
