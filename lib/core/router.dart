@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'auth_state.dart';
+import 'locale_state.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/signup_screen.dart';
 import '../features/landing/landing_screen.dart';
@@ -18,6 +19,18 @@ import '../features/provider/provider_shell.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
   final role = authState.value?.role;
+  // AppStrings.locale is a bare static field — mutating it doesn't itself rebuild anything,
+  // and every screen's own build() reads it without watching localeProvider (only the
+  // Account screen does, for its own toggle button). Combined with the per-role
+  // StatefulShellRoute.indexedStack keeping every tab's widget alive/cached, a screen that
+  // isn't currently on-screen when the user toggles language never gets a rebuild at all —
+  // it stays frozen showing whatever locale it first rendered in. Watching localeProvider
+  // here forces GoRouter itself (and every cached shell branch under it) to be torn down
+  // and recreated on toggle, which is what actually makes every screen re-render fresh
+  // against the new locale — a plain root-level rebuild doesn't reach into GoRouter's own
+  // persistent page cache. Trade-off: toggling language also resets navigation back to the
+  // shell's home tab, since the recreated router starts over at initialLocation.
+  ref.watch(localeProvider);
 
   return GoRouter(
     initialLocation: '/',
