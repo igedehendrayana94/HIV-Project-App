@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/locale_state.dart';
 import '../../core/theme.dart';
 import '../../shared/ambient_glow.dart';
 import '../../shared/i18n.dart';
@@ -8,12 +10,14 @@ import '../../shared/i18n.dart';
 // Mobile counterpart to HIV-Project-Web's public landing page (src/app/page.tsx) — same
 // headline/value-prop copy, condensed to one scroll instead of the web page's multi-section
 // scroll-reveal layout (no separate "how it works"/privacy sections here, this is a lighter
-// pre-auth distillation, not a 1:1 port).
-class LandingScreen extends StatelessWidget {
+// pre-auth distillation, not a 1:1 port). Web's landing page already has an EN/ID toggle;
+// this one didn't until now.
+class LandingScreen extends ConsumerWidget {
   const LandingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
     return Scaffold(
       body: Stack(
         children: [
@@ -24,7 +28,18 @@ class LandingScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: AppSpacing.xl),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: SegmentedButton<AppLocale>(
+                      segments: const [
+                        ButtonSegment(value: AppLocale.id, label: Text('ID')),
+                        ButtonSegment(value: AppLocale.en, label: Text('EN')),
+                      ],
+                      selected: {locale},
+                      onSelectionChanged: (_) => ref.read(localeProvider.notifier).toggle(),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
                   Center(
                     child: Image.asset('assets/branding/logo.png', width: 88, height: 88),
                   ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.9, 0.9)),
