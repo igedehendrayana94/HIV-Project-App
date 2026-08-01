@@ -15,10 +15,11 @@ import '../../../shared/i18n.dart';
 class RegisterPatientScreen extends StatefulWidget {
   // POST /api/patients auto-links to the caller's own account only for a PATIENT session;
   // Provider/Admin get a plain unlinked registration — same endpoint, backend branches on
-  // role, only the title needs to read differently here.
-  final String title;
+  // role, only the title needs to read differently here. An i18n key name (not literal text)
+  // so the title stays locale-correct — a raw string param can't react to the EN/ID toggle.
+  final String? titleKey;
 
-  const RegisterPatientScreen({super.key, this.title = 'Register as Patient'});
+  const RegisterPatientScreen({super.key, this.titleKey});
 
   @override
   State<RegisterPatientScreen> createState() => _RegisterPatientScreenState();
@@ -47,7 +48,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _dob == null) {
-      setState(() => _error = _dob == null ? 'Date of birth is required' : null);
+      setState(() => _error = _dob == null ? AppStrings.t('dateOfBirthRequired') : null);
       return;
     }
     setState(() {
@@ -74,7 +75,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.titleKey != null ? AppStrings.t(widget.titleKey!) : AppStrings.t('registerAsPatient')),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Form(
@@ -105,7 +108,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     const SizedBox(height: AppSpacing.md),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(_dob == null ? 'Date of Birth' : _dob!.toIso8601String().split('T').first),
+                      title: Text(_dob == null ? AppStrings.t('dateOfBirth') : _dob!.toIso8601String().split('T').first),
                       trailing: const Icon(Icons.calendar_today),
                       onTap: _pickDob,
                     ),

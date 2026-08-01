@@ -22,7 +22,7 @@ class ProviderHomeScreen extends ConsumerWidget {
       (Icons.fact_check_outlined, AppStrings.t('newScreening'),
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScreeningPatientPickerScreen()))),
       (Icons.person_add_outlined, AppStrings.t('registerPatient'),
-          () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPatientScreen(title: 'Register Patient')))),
+          () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPatientScreen(titleKey: 'registerPatient')))),
       (Icons.notifications_active_outlined, AppStrings.t('medicationReminders'),
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersPatientPickerScreen()))),
     ];
