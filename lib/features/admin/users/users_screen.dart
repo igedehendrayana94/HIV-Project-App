@@ -8,7 +8,6 @@ import '../../../shared/async_error_view.dart';
 import '../../../shared/confirm_dialog.dart';
 import '../../../shared/empty_state.dart';
 import '../../../shared/i18n.dart';
-import 'create_user_screen.dart';
 import 'models.dart';
 import 'users_provider.dart';
 
@@ -34,10 +33,6 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final usersAsync = ref.watch(adminUsersProvider);
     return Scaffold(
       appBar: AppBar(title: Text(AppStrings.t('users'))),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CreateUserScreen())),
-        child: const Icon(Icons.add),
-      ),
       body: usersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
@@ -145,6 +140,49 @@ class _UserRowState extends ConsumerState<_UserRow> {
     }
   }
 
+  Future<void> _roleDialog() async {
+    var selected = widget.user.role;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          // No dedicated i18n key for this dialog title — reuses the generic "role" label.
+          title: Text(AppStrings.t('role')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final r in ['ADMIN', 'PROVIDER', 'PATIENT'])
+                RadioListTile<String>(
+                  title: Text(r),
+                  value: r,
+                  // ignore: deprecated_member_use
+                  groupValue: selected,
+                  // ignore: deprecated_member_use
+                  onChanged: (v) => setDialogState(() => selected = v!),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppStrings.t('cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(AppStrings.t('save'))),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || selected == widget.user.role) return;
+    if (!mounted) return;
+    final ok = await confirmAction(
+      context,
+      title: AppStrings.t('areYouSure'),
+      // No dedicated i18n key for this specific confirmation — reuses rejectConfirmMessage's
+      // generic "are you sure" pattern via a plain literal instead of forcing an ill-fitting key.
+      message: 'Change ${widget.user.name}\'s role from ${widget.user.role} to $selected?',
+      confirmLabel: AppStrings.t('save'),
+      destructive: true,
+    );
+    if (ok) _act(() => dio.patch('/admin/users/${widget.user.id}/role', data: {'role': selected}));
+  }
+
   Future<void> _editDialog() async {
     final name = TextEditingController(text: widget.user.name);
     final email = TextEditingController(text: widget.user.email);
@@ -211,6 +249,8 @@ class _UserRowState extends ConsumerState<_UserRow> {
                         _act(() => dio.post('/admin/users/${u.id}/reject'));
                       case 'edit':
                         _editDialog();
+                      case 'role':
+                        _roleDialog();
                       case 'delete':
                         final ok = await confirmAction(
                           context,
@@ -229,8 +269,10 @@ class _UserRowState extends ConsumerState<_UserRow> {
                       PopupMenuItem(value: 'reject', child: Text(AppStrings.t('reject'))),
                     if (isSelf)
                       PopupMenuItem(value: 'edit', child: Text(AppStrings.t('edit')))
-                    else
+                    else ...[
+                      PopupMenuItem(value: 'role', child: Text(AppStrings.t('role'))),
                       PopupMenuItem(value: 'delete', child: Text(AppStrings.t('delete'))),
+                    ],
                   ],
                 ),
         ],
