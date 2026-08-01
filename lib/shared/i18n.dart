@@ -40,6 +40,28 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'patient': {AppLocale.en: 'Patient', AppLocale.id: 'Pasien'},
   'newScreening': {AppLocale.en: 'New Screening', AppLocale.id: 'Skrining Baru'},
   'status': {AppLocale.en: 'Status', AppLocale.id: 'Status'},
+  'searchByNameOrEmail': {
+    AppLocale.en: 'Search by name or email',
+    AppLocale.id: 'Cari berdasarkan nama atau email',
+  },
+  'searchPatientByName': {
+    AppLocale.en: 'Search patient by name',
+    AppLocale.id: 'Cari pasien berdasarkan nama',
+  },
+  'noPatientsMatchSearch': {
+    AppLocale.en: 'No patients match your search.',
+    AppLocale.id: 'Tidak ada pasien yang cocok dengan pencarian Anda.',
+  },
+  'noScreeningsMatchFilter': {
+    AppLocale.en: 'No screenings match this filter.',
+    AppLocale.id: 'Tidak ada skrining yang cocok dengan filter ini.',
+  },
+  'riskDistribution': {AppLocale.en: 'Risk Distribution', AppLocale.id: 'Distribusi Risiko'},
+  'myScreeningHistory': {AppLocale.en: 'My Screening History', AppLocale.id: 'Riwayat Skrining Saya'},
+  'somethingWentWrong': {
+    AppLocale.en: 'Something went wrong. Please try again.',
+    AppLocale.id: 'Terjadi kesalahan. Silakan coba lagi.',
+  },
 
   // Bottom nav labels
   'home': {AppLocale.en: 'Home', AppLocale.id: 'Beranda'},

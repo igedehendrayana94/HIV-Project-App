@@ -33,7 +33,7 @@ class ScreeningResultScreen extends StatelessWidget {
                 RiskPill(risk: overallRisk),
                 if (redFlag) ...[
                   const SizedBox(height: AppSpacing.xs),
-                  Text('RED FLAG',
+                  Text(AppStrings.t('redFlag'),
                       style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.bold)),
                 ],
                 const SizedBox(height: AppSpacing.sm),
@@ -42,7 +42,7 @@ class ScreeningResultScreen extends StatelessWidget {
             ),
           ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
           const SizedBox(height: AppSpacing.lg),
-          Text('Recommendations', style: Theme.of(context).textTheme.titleMedium),
+          Text(AppStrings.t('recommendations'), style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           AppCard(
             child: Column(
@@ -59,7 +59,7 @@ class ScreeningResultScreen extends StatelessWidget {
             ),
           ).animate(delay: 80.ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
           const SizedBox(height: AppSpacing.lg),
-          Text('Domain Scores', style: Theme.of(context).textTheme.titleMedium),
+          Text(AppStrings.t('domainScores'), style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           AppCard(
             child: Column(

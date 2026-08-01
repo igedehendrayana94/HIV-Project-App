@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../shared/i18n.dart';
 import 'token_storage.dart';
 
 // Same origin as the web app's own /api routes — HIV-Project-Web doubles as this app's
@@ -34,5 +35,5 @@ String apiErrorMessage(Object error) {
     final data = error.response?.data;
     if (data is Map && data['error'] is String) return data['error'] as String;
   }
-  return 'Something went wrong. Please try again.';
+  return AppStrings.t('somethingWentWrong');
 }

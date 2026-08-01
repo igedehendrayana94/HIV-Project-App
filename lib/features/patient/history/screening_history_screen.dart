@@ -4,6 +4,7 @@ import '../../../core/api_client.dart';
 import '../../../core/theme.dart';
 import '../../../shared/async_error_view.dart';
 import '../../../shared/empty_state.dart';
+import '../../../shared/i18n.dart';
 import '../../../shared/risk.dart';
 import '../../../shared/risk_pill.dart';
 import 'history_provider.dart';
@@ -24,14 +25,14 @@ class _ScreeningHistoryScreenState extends ConsumerState<ScreeningHistoryScreen>
   Widget build(BuildContext context) {
     final historyAsync = ref.watch(screeningHistoryProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Screening History')),
+      appBar: AppBar(title: Text(AppStrings.t('screeningHistory'))),
       body: historyAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(screeningHistoryProvider)),
         data: (assessments) {
           if (assessments.isEmpty) {
-            return const Center(child: Text('No screenings yet.'));
+            return Center(child: Text(AppStrings.t('noScreeningsYet')));
           }
           final filtered = _riskFilter == 'All'
               ? assessments
@@ -61,9 +62,9 @@ class _ScreeningHistoryScreenState extends ConsumerState<ScreeningHistoryScreen>
                   ),
                 ),
                 if (filtered.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: AppSpacing.xl),
-                    child: EmptyState(icon: Icons.search_off, message: 'No screenings match this filter.'),
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xl),
+                    child: EmptyState(icon: Icons.search_off, message: AppStrings.t('noScreeningsMatchFilter')),
                   )
                 else
                   ...[
@@ -72,7 +73,7 @@ class _ScreeningHistoryScreenState extends ConsumerState<ScreeningHistoryScreen>
                         title: RiskPill(risk: filtered[i].overallRisk),
                         subtitle: Text(filtered[i].createdAt.toLocal().toString()),
                         trailing: filtered[i].redFlag
-                            ? Text('RED FLAG',
+                            ? Text(AppStrings.t('redFlag'),
                                 style: Theme.of(context)
                                     .textTheme
                                     .labelSmall!

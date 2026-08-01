@@ -84,7 +84,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Role: ${user?.role ?? ''}', style: Theme.of(context).textTheme.bodySmall),
+                    Text('${AppStrings.t('role')}: ${user?.role ?? ''}', style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height: AppSpacing.md),
                     TextFormField(
                       controller: _name,

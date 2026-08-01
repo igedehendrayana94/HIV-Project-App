@@ -194,8 +194,7 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
                   validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                // No i18n key exists for this section label — left as plain English.
-                Text('Severity 1-4 options', style: Theme.of(context).textTheme.titleSmall),
+                Text(AppStrings.t('severityOptions1to4'), style: Theme.of(context).textTheme.titleSmall),
                 for (var i = 0; i < 4; i++)
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.sm),

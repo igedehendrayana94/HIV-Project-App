@@ -56,15 +56,14 @@ class _RemindersPatientPickerScreenState extends ConsumerState<RemindersPatientP
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                // No i18n key for a patient search hint — left as a plain English literal.
                 TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(labelText: 'Search patient by name'),
+                  decoration: InputDecoration(labelText: AppStrings.t('searchPatientByName')),
                   onChanged: (v) => setState(() => _query = v),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 if (filtered.isEmpty)
-                  const EmptyState(icon: Icons.search_off, message: 'No patients match your search.')
+                  EmptyState(icon: Icons.search_off, message: AppStrings.t('noPatientsMatchSearch'))
                 else
                   for (final (i, p) in filtered.indexed) ...[
                     AppCard(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../shared/async_error_view.dart';
+import '../../../shared/i18n.dart';
 import '../../../shared/risk_pill.dart';
 import '../../patient/screening/models.dart';
 
@@ -30,7 +31,7 @@ class PatientDetailScreen extends ConsumerWidget {
     final historyAsync = ref.watch(_patientHistoryProvider(patientId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Patient')),
+      appBar: AppBar(title: Text(AppStrings.t('patient'))),
       body: patientAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
@@ -50,7 +51,7 @@ class PatientDetailScreen extends ConsumerWidget {
                 if (patient['phone'] != null) Text(patient['phone'] as String),
                 if (patient['email'] != null) Text(patient['email'] as String),
                 const SizedBox(height: 24),
-                Text('Screening History', style: Theme.of(context).textTheme.titleMedium),
+                Text(AppStrings.t('screeningHistory'), style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 historyAsync.when(
                   loading: () => const Center(child: CircularProgressIndicator()),
@@ -60,7 +61,7 @@ class PatientDetailScreen extends ConsumerWidget {
                   ),
                   data: (history) {
                     final assessments = history['screeningAssessments'] as List<ScreeningAssessment>;
-                    if (assessments.isEmpty) return const Text('No screenings yet.');
+                    if (assessments.isEmpty) return Text(AppStrings.t('noScreeningsYet'));
                     return Column(
                       children: assessments.map((a) {
                         return ListTile(
@@ -68,7 +69,7 @@ class PatientDetailScreen extends ConsumerWidget {
                           title: RiskPill(risk: a.overallRisk),
                           subtitle: Text(a.createdAt.toLocal().toString()),
                           trailing: a.redFlag
-                              ? Text('RED FLAG',
+                              ? Text(AppStrings.t('redFlag'),
                                   style: Theme.of(context)
                                       .textTheme
                                       .labelSmall!

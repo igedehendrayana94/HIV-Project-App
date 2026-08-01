@@ -63,10 +63,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                // No i18n key for a users search hint — left as a plain English literal.
                 TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(labelText: 'Search by name or email'),
+                  decoration: InputDecoration(labelText: AppStrings.t('searchByNameOrEmail')),
                   onChanged: (v) => setState(() => _query = v),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -193,8 +192,8 @@ class _UserRowState extends ConsumerState<_UserRow> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-            TextField(controller: email, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: name, decoration: InputDecoration(labelText: AppStrings.t('name'))),
+            TextField(controller: email, decoration: InputDecoration(labelText: AppStrings.t('email'))),
           ],
         ),
         actions: [

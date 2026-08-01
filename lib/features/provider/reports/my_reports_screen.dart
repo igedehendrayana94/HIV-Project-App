@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../../../shared/async_error_view.dart';
+import '../../../shared/i18n.dart';
 import '../../../shared/risk_pill.dart';
 import 'my_reports_provider.dart';
 
@@ -12,7 +13,7 @@ class MyReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reportsAsync = ref.watch(myReportsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Reports')),
+      appBar: AppBar(title: Text(AppStrings.t('reports'))),
       body: reportsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
@@ -22,10 +23,10 @@ class MyReportsScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text('Risk Distribution', style: Theme.of(context).textTheme.titleSmall),
+              Text(AppStrings.t('riskDistribution'), style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               if (reports.distribution.isEmpty)
-                const Text('No screenings yet.')
+                Text(AppStrings.t('noScreeningsYet'))
               else
                 Card(
                   child: Column(
@@ -38,12 +39,12 @@ class MyReportsScreen extends ConsumerWidget {
                   ),
                 ),
               const SizedBox(height: 24),
-              Text('My Screening History', style: Theme.of(context).textTheme.titleSmall),
+              Text(AppStrings.t('myScreeningHistory'), style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               if (reports.screenings.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('No screenings yet.')),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text(AppStrings.t('noScreeningsYet'))),
                 )
               else
                 Card(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'i18n.dart';
 
 // One consistent error state for every FutureProvider `.when()` error branch — was a bare
 // Center(Text(...)) with no way to recover short of leaving and re-entering the screen.
@@ -20,7 +21,7 @@ class AsyncErrorView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+            OutlinedButton(onPressed: onRetry, child: Text(AppStrings.t('retry'))),
           ],
         ),
       ),

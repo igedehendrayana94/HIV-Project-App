@@ -47,18 +47,18 @@ class ReminderScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Reminder Times', style: Theme.of(context).textTheme.titleMedium),
+                            Text(AppStrings.t('reminderTimes'), style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: AppSpacing.xs),
                             Text(reminder['times'] as String? ?? '-'),
                             if (reminder['notes'] != null) ...[
                               const SizedBox(height: AppSpacing.md),
-                              Text('Notes', style: Theme.of(context).textTheme.titleMedium),
+                              Text(AppStrings.t('notes'), style: Theme.of(context).textTheme.titleMedium),
                               const SizedBox(height: AppSpacing.xs),
                               Text(reminder['notes'] as String),
                             ],
                             if (reminder['startDate'] != null) ...[
                               const SizedBox(height: AppSpacing.md),
-                              Text('Effective From', style: Theme.of(context).textTheme.titleMedium),
+                              Text(AppStrings.t('effectiveFrom'), style: Theme.of(context).textTheme.titleMedium),
                               const SizedBox(height: AppSpacing.xs),
                               Text(DateTime.parse(reminder['startDate'] as String).toLocal().toString().split(' ').first),
                             ],
