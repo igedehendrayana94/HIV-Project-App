@@ -299,3 +299,15 @@ screens.
   confirms no exception on open, exactly 2 rows render (no fabricated score-1/2 entries), and
   saving preserves the original 2 options untouched. `flutter analyze` clean, both tests in
   that file pass.
+- 2026-08-02: **Removed Provider's on-behalf-of screening flow — patient-self-screening only
+  now**, matching the same restriction added on the web backend the same day (see
+  `HIV-Project-Web/CLAUDE.md`'s matching entry — `POST /api/screening` now 403s for any
+  non-PATIENT session, which is the actual enforcement this app already relies on). Removed
+  the "New Screening" card from `ProviderHomeScreen` (the only launch site for this flow —
+  Admin never had one in the mobile app to begin with, unlike web), deleted the now-unreachable
+  `ScreeningPatientPickerScreen` entirely, and stripped `NewScreeningScreen`'s optional
+  `patientId`/`patientName` params (its one remaining call site,
+  `patient_shell.dart`'s `/screening` tab, never supplied them anyway). Provider still views a
+  patient's screening history read-only from their detail page (`patientHistoryProvider`
+  untouched) — only *conducting* a new screening was removed. `flutter analyze` and the full
+  test suite (`flutter test`) clean.
