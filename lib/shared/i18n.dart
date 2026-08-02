@@ -48,6 +48,15 @@ const Map<String, Map<AppLocale, String>> _strings = {
     AppLocale.en: 'Search patient by name',
     AppLocale.id: 'Cari pasien berdasarkan nama',
   },
+  'searchQuestions': {
+    AppLocale.en: 'Search questions by text, key, or domain',
+    AppLocale.id: 'Cari pertanyaan berdasarkan teks, kunci, atau domain',
+  },
+  'noQuestionsMatchSearch': {
+    AppLocale.en: 'No questions match your search.',
+    AppLocale.id: 'Tidak ada pertanyaan yang cocok dengan pencarian.',
+  },
+  'previous': {AppLocale.en: 'Previous', AppLocale.id: 'Sebelumnya'},
   'noPatientsMatchSearch': {
     AppLocale.en: 'No patients match your search.',
     AppLocale.id: 'Tidak ada pasien yang cocok dengan pencarian Anda.',
@@ -317,6 +326,9 @@ class AppStrings {
 
   static String greeting(String name) =>
       locale == AppLocale.id ? 'Hai, $name' : 'Hi, $name';
+
+  static String pageOf(int current, int total) =>
+      locale == AppLocale.id ? 'Halaman $current dari $total' : 'Page $current of $total';
 
   static String assistantSuggestsProvider(String urgency) => locale == AppLocale.id
       ? 'Asisten menyarankan Anda berbicara dengan petugas ($urgency).'

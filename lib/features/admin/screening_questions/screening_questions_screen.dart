@@ -57,11 +57,28 @@ final screeningQuestionsProvider = FutureProvider<List<ScreeningQuestion>>((ref)
   return (res.data['questions'] as List).map((q) => ScreeningQuestion.fromJson(q as Map<String, dynamic>)).toList();
 });
 
-class ScreeningQuestionsScreen extends ConsumerWidget {
+const _pageSize = 10;
+
+class ScreeningQuestionsScreen extends ConsumerStatefulWidget {
   const ScreeningQuestionsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScreeningQuestionsScreen> createState() => _ScreeningQuestionsScreenState();
+}
+
+class _ScreeningQuestionsScreenState extends ConsumerState<ScreeningQuestionsScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final questionsAsync = ref.watch(screeningQuestionsProvider);
     return Scaffold(
       appBar: AppBar(title: Text(AppStrings.t('screeningQuestions'))),
@@ -73,64 +90,104 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(screeningQuestionsProvider)),
-        data: (questions) => RefreshIndicator(
-          onRefresh: () => ref.refresh(screeningQuestionsProvider.future),
-          child: questions.isEmpty
-              ? ListView(
-                  children: [
-                    const SizedBox(height: AppSpacing.xl),
-                    // No key covers this empty state yet — left as plain English.
-                    const EmptyState(icon: Icons.fact_check_outlined, message: 'No screening questions yet.'),
-                  ],
-                )
-              : ListView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  children: [
-                    for (final (i, q) in questions.indexed) ...[
-                      AppCard(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(q.questionEn, style: Theme.of(context).textTheme.titleMedium),
-                                  const SizedBox(height: AppSpacing.xs),
-                                  Text(
-                                    '${q.domainKey} · ${q.key}',
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined),
-                              onPressed: () => Navigator.of(context)
-                                  .push(MaterialPageRoute(builder: (_) => _QuestionFormScreen(existing: q))),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () async {
-                                final ok = await confirmAction(
-                                  context,
-                                  title: AppStrings.t('areYouSure'),
-                                  message: AppStrings.t('deleteQuestionConfirmMessage'),
-                                  confirmLabel: AppStrings.t('delete'),
-                                  destructive: true,
-                                );
-                                if (!ok) return;
-                                await dio.delete('/admin/screening-questions/${q.id}');
-                                ref.invalidate(screeningQuestionsProvider);
-                              },
-                            ),
-                          ],
-                        ),
-                      ).animate(delay: (i * 40).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
-                      if (i != questions.length - 1) const SizedBox(height: AppSpacing.sm),
-                    ],
-                  ],
+        data: (questions) {
+          final q = _query.trim().toLowerCase();
+          final filtered = q.isEmpty
+              ? questions
+              : questions
+                  .where((s) =>
+                      s.questionEn.toLowerCase().contains(q) ||
+                      s.questionId.toLowerCase().contains(q) ||
+                      s.key.toLowerCase().contains(q) ||
+                      s.domainKey.toLowerCase().contains(q))
+                  .toList();
+          final pageCount = filtered.isEmpty ? 1 : (filtered.length / _pageSize).ceil();
+          final page = _page.clamp(0, pageCount - 1);
+          final pageItems = filtered.skip(page * _pageSize).take(_pageSize).toList();
+
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(screeningQuestionsProvider.future),
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              children: [
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(labelText: AppStrings.t('searchQuestions')),
+                  onChanged: (v) => setState(() {
+                    _query = v;
+                    _page = 0;
+                  }),
                 ),
-        ),
+                const SizedBox(height: AppSpacing.md),
+                if (questions.isEmpty)
+                  EmptyState(icon: Icons.fact_check_outlined, message: AppStrings.t('noScreeningQuestionsYet'))
+                else if (filtered.isEmpty)
+                  EmptyState(icon: Icons.search_off, message: AppStrings.t('noQuestionsMatchSearch'))
+                else ...[
+                  for (final (i, item) in pageItems.indexed) ...[
+                    AppCard(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.questionEn, style: Theme.of(context).textTheme.titleMedium),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  '${item.domainKey} · ${item.key}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined),
+                            onPressed: () => Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (_) => _QuestionFormScreen(existing: item))),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () async {
+                              final ok = await confirmAction(
+                                context,
+                                title: AppStrings.t('areYouSure'),
+                                message: AppStrings.t('deleteQuestionConfirmMessage'),
+                                confirmLabel: AppStrings.t('delete'),
+                                destructive: true,
+                              );
+                              if (!ok) return;
+                              await dio.delete('/admin/screening-questions/${item.id}');
+                              ref.invalidate(screeningQuestionsProvider);
+                            },
+                          ),
+                        ],
+                      ),
+                    ).animate(delay: (i * 40).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
+                    if (i != pageItems.length - 1) const SizedBox(height: AppSpacing.sm),
+                  ],
+                  if (pageCount > 1) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: page > 0 ? () => setState(() => _page = page - 1) : null,
+                          child: Text(AppStrings.t('previous')),
+                        ),
+                        Text(AppStrings.pageOf(page + 1, pageCount), style: Theme.of(context).textTheme.bodySmall),
+                        TextButton(
+                          onPressed: page < pageCount - 1 ? () => setState(() => _page = page + 1) : null,
+                          child: Text(AppStrings.t('next')),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
