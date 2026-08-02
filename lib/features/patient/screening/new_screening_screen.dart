@@ -6,7 +6,6 @@ import '../../../core/theme.dart';
 import '../../../shared/app_card.dart';
 import '../../../shared/async_error_view.dart';
 import '../../../shared/i18n.dart';
-import '../../provider/patient/patient_detail_screen.dart' show patientHistoryProvider;
 import '../history/history_provider.dart';
 import 'domains_provider.dart';
 import 'models.dart';
@@ -19,11 +18,12 @@ import 'result_screen.dart';
 // (Headspace/Calm-style onboarding pacing) better than a dense settings-style list.
 // Scoring/submission logic (_answers, _answerFor, _submit) is completely unchanged from the
 // previous version — only the navigation shell around it changed.
+//
+// Self-screening only — the app used to also let a Provider run this on behalf of any patient
+// (via a patient-picker screen, optional patientId/patientName params here), removed per
+// explicit request. Provider still sees a patient's screening history read-only.
 class NewScreeningScreen extends ConsumerStatefulWidget {
-  final int? patientId;
-  final String? patientName;
-
-  const NewScreeningScreen({super.key, this.patientId, this.patientName});
+  const NewScreeningScreen({super.key});
 
   @override
   ConsumerState<NewScreeningScreen> createState() => _NewScreeningScreenState();
@@ -75,15 +75,8 @@ class _NewScreeningScreenState extends ConsumerState<NewScreeningScreen> {
         },
     };
     try {
-      final res = await dio.post('/screening', data: {
-        'answers': answersJson,
-        if (widget.patientId != null) 'patientId': widget.patientId,
-      });
-      if (widget.patientId != null) {
-        ref.invalidate(patientHistoryProvider(widget.patientId!));
-      } else {
-        ref.invalidate(screeningHistoryProvider);
-      }
+      final res = await dio.post('/screening', data: {'answers': answersJson});
+      ref.invalidate(screeningHistoryProvider);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -105,11 +98,7 @@ class _NewScreeningScreenState extends ConsumerState<NewScreeningScreen> {
   Widget build(BuildContext context) {
     final domainsAsync = ref.watch(domainsProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.patientName == null
-            ? AppStrings.t('newScreening')
-            : '${AppStrings.t('newScreening')} — ${widget.patientName}'),
-      ),
+      appBar: AppBar(title: Text(AppStrings.t('newScreening'))),
       body: domainsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(domainsProvider)),

@@ -8,10 +8,12 @@ import '../../../shared/app_card.dart';
 import '../../../shared/i18n.dart';
 import '../../admin/reminders/reminders_patient_picker_screen.dart';
 import '../../patient/registration/register_patient_screen.dart';
-import '../screening/screening_patient_picker_screen.dart';
 
 // Landing tab inside ProviderShell (see provider_shell.dart) — Consultations/Reports/Account
 // are now real bottom-nav tabs; this hub keeps only the lower-frequency destinations.
+// Screening is patient-self-screening only (Provider used to be able to run one on behalf of
+// any patient — removed per explicit request; Provider can still view a patient's screening
+// history from their detail page, just not conduct a new one).
 class ProviderHomeScreen extends ConsumerWidget {
   const ProviderHomeScreen({super.key});
 
@@ -19,8 +21,6 @@ class ProviderHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).value;
     final items = [
-      (Icons.fact_check_outlined, AppStrings.t('newScreening'),
-          () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScreeningPatientPickerScreen()))),
       (Icons.person_add_outlined, AppStrings.t('registerPatient'),
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPatientScreen(titleKey: 'registerPatient')))),
       (Icons.notifications_active_outlined, AppStrings.t('medicationReminders'),
