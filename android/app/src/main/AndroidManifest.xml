@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Every screen in this app talks to the remote HTTPS backend (dio) — declared here, not
+         just in the debug/profile manifests (Flutter's scaffold default, added only for
+         hot-reload/VM-service), since a release build merges only this manifest. Without this,
+         a release APK would have no network access at all and every API call would fail. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Medi-Care HIV"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
