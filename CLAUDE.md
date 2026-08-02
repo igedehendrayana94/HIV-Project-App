@@ -311,3 +311,23 @@ screens.
   patient's screening history read-only from their detail page (`patientHistoryProvider`
   untouched) — only *conducting* a new screening was removed. `flutter analyze` and the full
   test suite (`flutter test`) clean.
+- 2026-08-02: **Search + pagination on admin Screening Questions.** Now that all 28 built-in
+  symptoms plus any custom ones live in one editable list (see the migration entry above), a
+  flat scroll was getting long. Added a `TextField` filtering by question text (EN/ID), key, or
+  domain (client-side, same `_query`/`.where()` pattern as Admin Users and the patient pickers
+  elsewhere in this app — no new endpoint), and simple 10-per-page pagination
+  (Previous/"Page X of Y"/Next, `AppStrings.pageOf()` new locale-aware helper) — hidden
+  entirely when everything already fits one page; searching resets to page 1. `ScreeningQuestionsScreen`
+  went from `ConsumerWidget` to `ConsumerStatefulWidget` to hold the query/page state. Also
+  fixed a small pre-existing bug noticed while touching the empty state: a `noScreeningQuestionsYet`
+  i18n key already existed but was unused, with a stale comment claiming no key covered it —
+  wired in.
+  Hit a real Flutter-test gotcha writing the regression test (15-question fixture, forces a
+  genuine second page): `ListView` slivers only mount elements within the viewport+cache
+  extent regardless of `children:` vs `.builder` — the default 800x600 test surface silently
+  truncated the list well before the assertions, with no error, just missing widgets. Not an
+  offstage issue (`skipOffstage: false` didn't help, unlike the earlier edit-form test) — the
+  later items and the pagination row genuinely aren't built yet. Fixed by enlarging the test
+  viewport (`tester.view.physicalSize`) so a full page fits without scrolling, since the
+  pagination *logic* was what needed verifying, not scroll behavior. `flutter analyze` and the
+  full test suite clean.
