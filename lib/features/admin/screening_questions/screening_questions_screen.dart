@@ -136,9 +136,20 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
   }
 }
 
-// stage2Options is a 1-4 severity scale for every built-in symptom except one special case
-// (seizures, 3-4 only) — this form always creates/edits the standard 4-point scale rather than
-// a fully dynamic add/remove list editor. Delete + recreate for anything unusual.
+// stage2Options is normally a 1-4 severity scale, but at least one built-in symptom
+// ("seizures/decreased consciousness") only has 2 options (scores 3-4) — the option list below
+// is a dynamic add/remove list rather than a hardcoded 4-slot form, so that case (and any
+// future non-standard one) can be created/edited without fabricating fake labels.
+class _OptionRow {
+  final TextEditingController score;
+  final TextEditingController labelEn;
+  final TextEditingController labelId;
+  _OptionRow({String score = '', String labelEn = '', String labelId = ''})
+      : score = TextEditingController(text: score),
+        labelEn = TextEditingController(text: labelEn),
+        labelId = TextEditingController(text: labelId);
+}
+
 class _QuestionFormScreen extends ConsumerStatefulWidget {
   final ScreeningQuestion? existing;
   const _QuestionFormScreen({this.existing});
@@ -153,19 +164,12 @@ class _QuestionFormScreenState extends ConsumerState<_QuestionFormScreen> {
   late final _key = TextEditingController(text: widget.existing?.key ?? '');
   late final _questionEn = TextEditingController(text: widget.existing?.questionEn ?? '');
   late final _questionId = TextEditingController(text: widget.existing?.questionId ?? '');
-  late final _labelsEn = List.generate(
-    4,
-    (i) => TextEditingController(
-      text: widget.existing?.stage2Options.firstWhere((o) => o.score == i + 1).labelEn ?? '',
-    ),
-  );
-  late final _labelsId = List.generate(
-    4,
-    (i) => TextEditingController(
-      text: widget.existing?.stage2Options.firstWhere((o) => o.score == i + 1).labelId ?? '',
-    ),
-  );
-  late bool _redFlag = widget.existing?.redFlagAtScore == 4;
+  late final List<_OptionRow> _options = widget.existing != null
+      ? widget.existing!.stage2Options
+          .map((o) => _OptionRow(score: '${o.score}', labelEn: o.labelEn, labelId: o.labelId))
+          .toList()
+      : List.generate(4, (i) => _OptionRow(score: '${i + 1}'));
+  late bool _redFlag = widget.existing?.redFlagAtScore != null;
   bool _saving = false;
   String? _error;
 
@@ -175,10 +179,21 @@ class _QuestionFormScreenState extends ConsumerState<_QuestionFormScreen> {
     _domainKey = widget.existing?.domainKey;
   }
 
+  int _maxOptionScore() =>
+      _options.map((o) => int.tryParse(o.score.text) ?? 0).fold(0, (a, b) => a > b ? a : b);
+
+  void _addOption() {
+    setState(() => _options.add(_OptionRow(score: '${_maxOptionScore() + 1}')));
+  }
+
+  void _removeOption(int i) {
+    if (_options.length <= 1) return;
+    setState(() => _options.removeAt(i));
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _domainKey == null) {
-      // No i18n key exists for this validation message — left as plain English.
-      setState(() => _error = _domainKey == null ? 'Domain is required' : null);
+      setState(() => _error = _domainKey == null ? AppStrings.t('domainRequired') : null);
       return;
     }
     setState(() {
@@ -191,10 +206,14 @@ class _QuestionFormScreenState extends ConsumerState<_QuestionFormScreen> {
       'questionEn': _questionEn.text.trim(),
       'questionId': _questionId.text.trim(),
       'stage2Options': [
-        for (var i = 0; i < 4; i++)
-          {'labelEn': _labelsEn[i].text.trim(), 'labelId': _labelsId[i].text.trim(), 'score': i + 1},
+        for (final o in _options)
+          {
+            'labelEn': o.labelEn.text.trim(),
+            'labelId': o.labelId.text.trim(),
+            'score': int.tryParse(o.score.text) ?? 0,
+          },
       ],
-      'redFlagAtScore': _redFlag ? 4 : null,
+      'redFlagAtScore': _redFlag ? _maxOptionScore() : null,
     };
     try {
       final existing = widget.existing;
@@ -255,16 +274,25 @@ class _QuestionFormScreenState extends ConsumerState<_QuestionFormScreen> {
                   validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Text(AppStrings.t('severityOptions1to4'), style: Theme.of(context).textTheme.titleSmall),
-                for (var i = 0; i < 4; i++)
+                Text(AppStrings.t('severityOptionsVariable'), style: Theme.of(context).textTheme.titleSmall),
+                for (var i = 0; i < _options.length; i++)
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.sm),
                     child: Row(
                       children: [
-                        Text('${i + 1}. '),
+                        SizedBox(
+                          width: 56,
+                          child: TextFormField(
+                            controller: _options[i].score,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(labelText: AppStrings.t('score')),
+                            validator: (v) => (v == null || int.tryParse(v) == null) ? '' : null,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: TextFormField(
-                            controller: _labelsEn[i],
+                            controller: _options[i].labelEn,
                             decoration: InputDecoration(labelText: AppStrings.t('labelEn')),
                             validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                           ),
@@ -272,17 +300,25 @@ class _QuestionFormScreenState extends ConsumerState<_QuestionFormScreen> {
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: TextFormField(
-                            controller: _labelsId[i],
+                            controller: _options[i].labelId,
                             decoration: InputDecoration(labelText: AppStrings.t('labelId')),
                             validator: (v) => (v == null || v.isEmpty) ? AppStrings.t('required') : null,
                           ),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          onPressed: _options.length <= 1 ? null : () => _removeOption(i),
+                        ),
                       ],
                     ),
                   ),
+                TextButton(
+                  onPressed: _addOption,
+                  child: Text(AppStrings.t('addOption')),
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(AppStrings.t('redFlagAtScore4')),
+                  title: Text(AppStrings.t('redFlagAtMaxScore')),
                   value: _redFlag,
                   onChanged: (v) => setState(() => _redFlag = v),
                 ),

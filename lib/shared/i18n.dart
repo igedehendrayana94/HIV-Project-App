@@ -211,9 +211,9 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'screeningResult': {AppLocale.en: 'Screening Result', AppLocale.id: 'Hasil Skrining'},
   'backToHome': {AppLocale.en: 'Back to Home', AppLocale.id: 'Kembali ke Beranda'},
   'redFlag': {AppLocale.en: 'RED FLAG', AppLocale.id: 'TANDA BAHAYA'},
-  'redFlagAtScore4': {
-    AppLocale.en: 'Trigger emergency red flag at score 4',
-    AppLocale.id: 'Picu red flag darurat pada skor 4',
+  'redFlagAtMaxScore': {
+    AppLocale.en: 'Trigger emergency red flag at the highest severity option',
+    AppLocale.id: 'Picu red flag darurat pada pilihan keparahan tertinggi',
   },
   'recommendations': {AppLocale.en: 'Recommendations', AppLocale.id: 'Rekomendasi'},
   'domainScores': {AppLocale.en: 'Domain Scores', AppLocale.id: 'Skor Domain'},
@@ -234,10 +234,13 @@ const Map<String, Map<AppLocale, String>> _strings = {
     AppLocale.id: 'Belum ada pertanyaan skrining.',
   },
   'domainRequired': {AppLocale.en: 'Domain is required', AppLocale.id: 'Domain wajib diisi'},
-  'severityOptions1to4': {
-    AppLocale.en: 'Severity 1-4 options',
-    AppLocale.id: 'Pilihan keparahan 1-4',
+  'severityOptionsVariable': {
+    AppLocale.en: 'Severity options (score + labels)',
+    AppLocale.id: 'Pilihan keparahan (skor + label)',
   },
+  'addOption': {AppLocale.en: '+ Add option', AppLocale.id: '+ Tambah pilihan'},
+  'removeOption': {AppLocale.en: 'Remove', AppLocale.id: 'Hapus'},
+  'score': {AppLocale.en: 'Score', AppLocale.id: 'Skor'},
   'reminderTimesRequired': {
     AppLocale.en: 'Reminder times are required',
     AppLocale.id: 'Waktu pengingat wajib diisi',

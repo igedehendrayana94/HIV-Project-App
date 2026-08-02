@@ -14,8 +14,11 @@ import 'package:hiv_project_app/features/admin/screening_questions/screening_que
 // environment, see HIV-Project-App/CLAUDE.md's Environment section), with a fake HttpClientAdapter
 // standing in for the real backend so the assertions are deterministic.
 class _FakeAdapter implements HttpClientAdapter {
+  final Map<String, dynamic> questionJson;
   final List<RequestOptions> requests = [];
   Map<String, dynamic>? lastPatchBody;
+
+  _FakeAdapter(this.questionJson);
 
   @override
   void close({bool force = false}) {}
@@ -42,26 +45,11 @@ class _FakeAdapter implements HttpClientAdapter {
 
     if (options.path == '/admin/screening-questions' && options.method == 'GET') {
       return _json({
-        'questions': [
-          {
-            'id': 1,
-            'domainKey': 'gastrointestinal',
-            'key': 'nausea_custom',
-            'questionEn': 'Old question text',
-            'questionId': 'Teks pertanyaan lama',
-            'stage2Options': [
-              {'labelEn': 'a', 'labelId': 'a', 'score': 1},
-              {'labelEn': 'b', 'labelId': 'b', 'score': 2},
-              {'labelEn': 'c', 'labelId': 'c', 'score': 3},
-              {'labelEn': 'd', 'labelId': 'd', 'score': 4},
-            ],
-            'redFlagAtScore': null,
-          },
-        ],
+        'questions': [questionJson],
       });
     }
 
-    if (options.path == '/admin/screening-questions/1' && options.method == 'PATCH') {
+    if (options.path == '/admin/screening-questions/${questionJson['id']}' && options.method == 'PATCH') {
       lastPatchBody = options.data as Map<String, dynamic>;
       return _json({'ok': true, 'question': lastPatchBody});
     }
@@ -76,6 +64,38 @@ class _FakeAdapter implements HttpClientAdapter {
     });
   }
 }
+
+final _standardQuestion = {
+  'id': 1,
+  'domainKey': 'gastrointestinal',
+  'key': 'nausea_custom',
+  'questionEn': 'Old question text',
+  'questionId': 'Teks pertanyaan lama',
+  'stage2Options': [
+    {'labelEn': 'a', 'labelId': 'a', 'score': 1},
+    {'labelEn': 'b', 'labelId': 'b', 'score': 2},
+    {'labelEn': 'c', 'labelId': 'c', 'score': 3},
+    {'labelEn': 'd', 'labelId': 'd', 'score': 4},
+  ],
+  'redFlagAtScore': null,
+};
+
+// Shaped like the real "seizures/decreased consciousness" built-in symptom — only 2 severity
+// options (scores 3-4, not the usual 1-4). Before the dynamic option-list rewrite, opening this
+// in the edit form crashed (stage2Options.firstWhere((o) => o.score == i + 1) with no match for
+// i=0/1). This is the actual regression this task fixes.
+final _twoOptionQuestion = {
+  'id': 2,
+  'domainKey': 'gastrointestinal',
+  'key': 'seizures_like',
+  'questionEn': 'Are you having seizures?',
+  'questionId': 'Apakah Anda mengalami kejang?',
+  'stage2Options': [
+    {'labelEn': 'Brief seizures', 'labelId': 'Kejang singkat', 'score': 3},
+    {'labelEn': 'Recurrent seizures', 'labelId': 'Kejang berulang', 'score': 4},
+  ],
+  'redFlagAtScore': 4,
+};
 
 // CircularProgressIndicator's AnimationController.repeat() schedules frames forever while
 // visible, so pumpAndSettle (which waits for zero pending frames) hangs on any loading state —
@@ -104,7 +124,7 @@ void main() {
   });
 
   testWidgets('editing an existing screening question prefills the form and PATCHes', (tester) async {
-    final fake = _FakeAdapter();
+    final fake = _FakeAdapter(_standardQuestion);
     final originalAdapter = dio.httpClientAdapter;
     dio.httpClientAdapter = fake;
     addTearDown(() => dio.httpClientAdapter = originalAdapter);
@@ -153,5 +173,39 @@ void main() {
         .where((r) => r.method == 'GET' && r.path == '/admin/screening-questions')
         .length;
     expect(getCount, greaterThanOrEqualTo(2), reason: 'list should re-fetch after a successful edit');
+  });
+
+  testWidgets('editing a question with a non-standard 2-option severity scale does not crash', (tester) async {
+    final fake = _FakeAdapter(_twoOptionQuestion);
+    final originalAdapter = dio.httpClientAdapter;
+    dio.httpClientAdapter = fake;
+    addTearDown(() => dio.httpClientAdapter = originalAdapter);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: ScreeningQuestionsScreen()),
+      ),
+    );
+    await _settle(tester);
+    expect(find.text('Are you having seizures?'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await _settle(tester);
+    expect(tester.takeException(), isNull);
+
+    // Both real options prefilled, exactly 2 rows — no fabricated score-1/2 entries.
+    expect(find.widgetWithText(TextFormField, 'Brief seizures'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Recurrent seizures'), findsOneWidget);
+    expect(find.byIcon(Icons.remove_circle_outline), findsNWidgets(2));
+
+    final saveButton = tester.widget<FilledButton>(find.byType(FilledButton, skipOffstage: false));
+    saveButton.onPressed!();
+    await _settle(tester);
+
+    // Saved with the original 2 options intact (scores 3 and 4), not forced into 1-4.
+    final savedOptions = fake.lastPatchBody!['stage2Options'] as List;
+    expect(savedOptions.length, 2);
+    expect(savedOptions.map((o) => o['score']).toSet(), {3, 4});
+    expect(fake.lastPatchBody!['redFlagAtScore'], 4);
   });
 }
