@@ -211,6 +211,10 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'screeningResult': {AppLocale.en: 'Screening Result', AppLocale.id: 'Hasil Skrining'},
   'backToHome': {AppLocale.en: 'Back to Home', AppLocale.id: 'Kembali ke Beranda'},
   'redFlag': {AppLocale.en: 'RED FLAG', AppLocale.id: 'TANDA BAHAYA'},
+  'redFlagAtScore4': {
+    AppLocale.en: 'Trigger emergency red flag at score 4',
+    AppLocale.id: 'Picu red flag darurat pada skor 4',
+  },
   'recommendations': {AppLocale.en: 'Recommendations', AppLocale.id: 'Rekomendasi'},
   'domainScores': {AppLocale.en: 'Domain Scores', AppLocale.id: 'Skor Domain'},
   'reminderTimes': {AppLocale.en: 'Reminder Times', AppLocale.id: 'Waktu Pengingat'},

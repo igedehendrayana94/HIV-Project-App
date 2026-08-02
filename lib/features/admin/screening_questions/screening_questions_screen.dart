@@ -10,17 +10,45 @@ import '../../../shared/empty_state.dart';
 import '../../../shared/i18n.dart';
 import '../../patient/screening/domains_provider.dart';
 
+class StageOption {
+  final String labelEn;
+  final String labelId;
+  final int score;
+  StageOption({required this.labelEn, required this.labelId, required this.score});
+  factory StageOption.fromJson(Map<String, dynamic> j) => StageOption(
+        labelEn: j['labelEn'] as String,
+        labelId: j['labelId'] as String,
+        score: j['score'] as int,
+      );
+}
+
 class ScreeningQuestion {
   final int id;
   final String domainKey;
   final String key;
   final String questionEn;
-  ScreeningQuestion({required this.id, required this.domainKey, required this.key, required this.questionEn});
+  final String questionId;
+  final List<StageOption> stage2Options;
+  final int? redFlagAtScore;
+  ScreeningQuestion({
+    required this.id,
+    required this.domainKey,
+    required this.key,
+    required this.questionEn,
+    required this.questionId,
+    required this.stage2Options,
+    required this.redFlagAtScore,
+  });
   factory ScreeningQuestion.fromJson(Map<String, dynamic> j) => ScreeningQuestion(
         id: j['id'] as int,
         domainKey: j['domainKey'] as String,
         key: j['key'] as String,
         questionEn: j['questionEn'] as String,
+        questionId: j['questionId'] as String,
+        stage2Options: (j['stage2Options'] as List)
+            .map((o) => StageOption.fromJson(o as Map<String, dynamic>))
+            .toList(),
+        redFlagAtScore: j['redFlagAtScore'] as int?,
       );
 }
 
@@ -38,7 +66,7 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(AppStrings.t('screeningQuestions'))),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _AddQuestionScreen())),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _QuestionFormScreen())),
         child: const Icon(Icons.add),
       ),
       body: questionsAsync.when(
@@ -76,6 +104,11 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
                               ),
                             ),
                             IconButton(
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: () => Navigator.of(context)
+                                  .push(MaterialPageRoute(builder: (_) => _QuestionFormScreen(existing: q))),
+                            ),
+                            IconButton(
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () async {
                                 final ok = await confirmAction(
@@ -104,25 +137,43 @@ class ScreeningQuestionsScreen extends ConsumerWidget {
 }
 
 // stage2Options is a 1-4 severity scale for every built-in symptom except one special case
-// (seizures, 3-4 only) — this form always creates the standard 4-point scale rather than a
-// fully dynamic add/remove list editor. Delete + recreate for anything unusual.
-class _AddQuestionScreen extends ConsumerStatefulWidget {
-  const _AddQuestionScreen();
+// (seizures, 3-4 only) — this form always creates/edits the standard 4-point scale rather than
+// a fully dynamic add/remove list editor. Delete + recreate for anything unusual.
+class _QuestionFormScreen extends ConsumerStatefulWidget {
+  final ScreeningQuestion? existing;
+  const _QuestionFormScreen({this.existing});
 
   @override
-  ConsumerState<_AddQuestionScreen> createState() => _AddQuestionScreenState();
+  ConsumerState<_QuestionFormScreen> createState() => _QuestionFormScreenState();
 }
 
-class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
+class _QuestionFormScreenState extends ConsumerState<_QuestionFormScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _domainKey;
-  final _key = TextEditingController();
-  final _questionEn = TextEditingController();
-  final _questionId = TextEditingController();
-  final _labelsEn = List.generate(4, (_) => TextEditingController());
-  final _labelsId = List.generate(4, (_) => TextEditingController());
+  late final _key = TextEditingController(text: widget.existing?.key ?? '');
+  late final _questionEn = TextEditingController(text: widget.existing?.questionEn ?? '');
+  late final _questionId = TextEditingController(text: widget.existing?.questionId ?? '');
+  late final _labelsEn = List.generate(
+    4,
+    (i) => TextEditingController(
+      text: widget.existing?.stage2Options.firstWhere((o) => o.score == i + 1).labelEn ?? '',
+    ),
+  );
+  late final _labelsId = List.generate(
+    4,
+    (i) => TextEditingController(
+      text: widget.existing?.stage2Options.firstWhere((o) => o.score == i + 1).labelId ?? '',
+    ),
+  );
+  late bool _redFlag = widget.existing?.redFlagAtScore == 4;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _domainKey = widget.existing?.domainKey;
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _domainKey == null) {
@@ -134,17 +185,24 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
       _saving = true;
       _error = null;
     });
+    final data = {
+      'domainKey': _domainKey,
+      'key': _key.text.trim(),
+      'questionEn': _questionEn.text.trim(),
+      'questionId': _questionId.text.trim(),
+      'stage2Options': [
+        for (var i = 0; i < 4; i++)
+          {'labelEn': _labelsEn[i].text.trim(), 'labelId': _labelsId[i].text.trim(), 'score': i + 1},
+      ],
+      'redFlagAtScore': _redFlag ? 4 : null,
+    };
     try {
-      await dio.post('/admin/screening-questions', data: {
-        'domainKey': _domainKey,
-        'key': _key.text.trim(),
-        'questionEn': _questionEn.text.trim(),
-        'questionId': _questionId.text.trim(),
-        'stage2Options': [
-          for (var i = 0; i < 4; i++)
-            {'labelEn': _labelsEn[i].text.trim(), 'labelId': _labelsId[i].text.trim(), 'score': i + 1},
-        ],
-      });
+      final existing = widget.existing;
+      if (existing == null) {
+        await dio.post('/admin/screening-questions', data: data);
+      } else {
+        await dio.patch('/admin/screening-questions/${existing.id}', data: data);
+      }
       ref.invalidate(screeningQuestionsProvider);
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -158,8 +216,11 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
   @override
   Widget build(BuildContext context) {
     final domainsAsync = ref.watch(domainsProvider);
+    final isEditing = widget.existing != null;
     return Scaffold(
-      appBar: AppBar(title: Text(AppStrings.t('newScreeningQuestion'))),
+      appBar: AppBar(
+        title: Text(isEditing ? AppStrings.t('edit') : AppStrings.t('newScreeningQuestion')),
+      ),
       body: domainsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => AsyncErrorView(message: apiErrorMessage(e), onRetry: () => ref.invalidate(domainsProvider)),
@@ -219,6 +280,12 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
                       ],
                     ),
                   ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(AppStrings.t('redFlagAtScore4')),
+                  value: _redFlag,
+                  onChanged: (v) => setState(() => _redFlag = v),
+                ),
                 if (_error != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -228,7 +295,7 @@ class _AddQuestionScreenState extends ConsumerState<_AddQuestionScreen> {
                   onPressed: _saving ? null : _submit,
                   child: _saving
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Text(AppStrings.t('addQuestion')),
+                      : Text(isEditing ? AppStrings.t('save') : AppStrings.t('addQuestion')),
                 ),
               ],
             ),
