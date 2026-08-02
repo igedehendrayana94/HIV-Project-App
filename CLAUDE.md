@@ -226,3 +226,56 @@ screens.
   action), both patient-picker screens (name search), Screening History (risk-level
   `ChoiceChip` filter). All client-side filtering of the already-fetched list — no new API
   calls, no pagination added.
+- 2026-08-02: **Bug audit + fixes: dead back-to-home button, stale history after screening
+  submit.** User reported the "Kembali ke Beranda" button on the screening result screen did
+  nothing for a self-screening patient, and the dashboard/history only updated after a manual
+  pull-to-refresh. Root cause for the button: `new_screening_screen.dart`'s `_submit()` reaches
+  the result screen via `Navigator.pushReplacement` — for the patient's own screening flow
+  (the Screening tab's `StatefulShellBranch` root), this makes the result screen the new root
+  of that branch's nested Navigator, so `result_screen.dart`'s
+  `Navigator.popUntil((r) => r.isFirst)` had nothing left to pop (already correctly a no-op
+  bug, not intermittent — it only ever worked for the provider-initiated flow, which has extra
+  stack depth). Fixed with a shell-aware `context.go('/home')`, which works regardless of
+  branch/depth; `popUntil` can never cross `StatefulShellRoute` branch boundaries anyway, so it
+  was the wrong tool even before this bug surfaced. Added
+  `test/screening_back_to_home_test.dart`, a Flutter-test-framework regression test that
+  reproduces the exact shell-branch-root scenario (submit → pushReplacement → tap button →
+  assert Home renders) — used this to confirm the fix was correct at the code level before
+  asking the user to verify on-device, after a first "still broken" report turned out to be a
+  stale build (the added `go_router` import needed a hot **restart**, not reload).
+  Root cause for the stale history: nothing in the submit → result → back-to-home path ever
+  called `ref.invalidate()` on `screeningHistoryProvider` (patient) or the provider-side
+  patient-detail history provider — Riverpod `FutureProvider`s cache until explicitly
+  invalidated, and the only refresh trigger anywhere in the app was manual pull-to-refresh.
+  `new_screening_screen.dart._submit()` now invalidates the correct one after a successful
+  POST (self-screening vs. provider-initiated, keyed off `widget.patientId`);
+  `patient_detail_screen.dart`'s previously-private `_patientHistoryProvider` was made public
+  (`patientHistoryProvider`) so the screening screen can reach it. A broader "audit all
+  buttons and communication" pass (background agent, full `onPressed`/`onTap` grep across
+  `lib/`) found no other stub/dead handlers — every other `onPressed: null` site was a real
+  loading-state gate, not a stub.
+- 2026-08-02: **Admin screening-questions: red-flag toggle + Edit.** Follow-up admin-feature
+  audit (web vs. Flutter, cross-checked dio calls against the real Next.js route handlers)
+  found both platforms' existing Add/Delete were correctly wired (no stale-list bug there,
+  unlike the screening-submit bug above) but flagged one real gap: the mobile add form had no
+  way to set `redFlagAtScore` (web's checkbox always sends `4` or `null`) — added, same EN/ID
+  copy as web. Then the user asked specifically for **Edit** on existing questions, which
+  neither platform had (web: delete+recreate only; Flutter: same) — added on both:
+  - **Web:** new `PATCH /api/admin/screening-questions/[id]` (mirrors `POST`'s validation
+    exactly — `domainKey` against the 6 real domain keys, required fields, `stage2Options`
+    shape, key-uniqueness check excluding the row's own id — `requireAdmin()`-gated,
+    audit-logged as `screeningQuestion.updated`). `ScreeningQuestionRow.tsx` gained an inline
+    edit mode (same `editing` boolean + Save/Cancel pattern as `PatientRow.tsx`), widened its
+    `Question` type to carry `questionId`/`stage2Options`/`redFlagAtScore` (previously only had
+    the 4 display fields) — `page.tsx` casts the Prisma row the same `as unknown as X` way
+    `mergeCustomQuestions()`'s callers already do for the same JSON-field-typing reason.
+    Verified against the local dev DB via curl, not just `tsc --noEmit`: created a real test
+    question, PATCHed every field including flipping the red-flag, confirmed the change
+    persisted on a fresh GET, confirmed a non-admin session gets 403, cleaned up the test row.
+  - **Flutter:** `_AddQuestionScreen` generalized into `_QuestionFormScreen(existing:)` —
+    prefills from an optional existing `ScreeningQuestion` and PATCHes instead of POSTs when
+    editing; the `ScreeningQuestion` model gained `questionId`/`stage2Options`/`redFlagAtScore`
+    fields (previously only carried the 4 list-display fields) so the form has something to
+    prefill from. An edit icon button per row opens the form pre-filled.
+  `flutter analyze` clean (same 2 pre-existing `RadioListTile` infos), web `tsc --noEmit`/
+  `npm run lint` clean. Deployed to production (`vercel deploy --prod`).
