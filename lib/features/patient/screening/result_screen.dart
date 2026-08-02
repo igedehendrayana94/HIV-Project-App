@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme.dart';
 import '../../../shared/app_card.dart';
 import '../../../shared/i18n.dart';
@@ -76,7 +77,7 @@ class ScreeningResultScreen extends StatelessWidget {
           ).animate(delay: 140.ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
-            onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
+            onPressed: () => context.go('/home'),
             child: Text(AppStrings.t('backToHome')),
           ),
         ],

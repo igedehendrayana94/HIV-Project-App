@@ -6,6 +6,8 @@ import '../../../core/theme.dart';
 import '../../../shared/app_card.dart';
 import '../../../shared/async_error_view.dart';
 import '../../../shared/i18n.dart';
+import '../../provider/patient/patient_detail_screen.dart' show patientHistoryProvider;
+import '../history/history_provider.dart';
 import 'domains_provider.dart';
 import 'models.dart';
 import 'result_screen.dart';
@@ -77,6 +79,11 @@ class _NewScreeningScreenState extends ConsumerState<NewScreeningScreen> {
         'answers': answersJson,
         if (widget.patientId != null) 'patientId': widget.patientId,
       });
+      if (widget.patientId != null) {
+        ref.invalidate(patientHistoryProvider(widget.patientId!));
+      } else {
+        ref.invalidate(screeningHistoryProvider);
+      }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(

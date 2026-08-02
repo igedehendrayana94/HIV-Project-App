@@ -11,7 +11,7 @@ final _patientProvider = FutureProvider.family<Map<String, dynamic>, int>((ref, 
   return {'patient': res.data['patient'], 'rank': res.data['rank']};
 });
 
-final _patientHistoryProvider = FutureProvider.family<Map<String, dynamic>, int>((ref, patientId) async {
+final patientHistoryProvider = FutureProvider.family<Map<String, dynamic>, int>((ref, patientId) async {
   final res = await dio.get('/patients/$patientId/history');
   return {
     'symptomReports': res.data['symptomReports'] as List,
@@ -28,7 +28,7 @@ class PatientDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patientAsync = ref.watch(_patientProvider(patientId));
-    final historyAsync = ref.watch(_patientHistoryProvider(patientId));
+    final historyAsync = ref.watch(patientHistoryProvider(patientId));
 
     return Scaffold(
       appBar: AppBar(title: Text(AppStrings.t('patient'))),
@@ -42,7 +42,7 @@ class PatientDetailScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(_patientProvider(patientId));
-              ref.invalidate(_patientHistoryProvider(patientId));
+              ref.invalidate(patientHistoryProvider(patientId));
             },
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -57,7 +57,7 @@ class PatientDetailScreen extends ConsumerWidget {
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (e, _) => AsyncErrorView(
                     message: apiErrorMessage(e),
-                    onRetry: () => ref.invalidate(_patientHistoryProvider(patientId)),
+                    onRetry: () => ref.invalidate(patientHistoryProvider(patientId)),
                   ),
                   data: (history) {
                     final assessments = history['screeningAssessments'] as List<ScreeningAssessment>;
