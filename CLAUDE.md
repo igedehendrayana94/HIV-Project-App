@@ -279,3 +279,23 @@ screens.
     prefill from. An edit icon button per row opens the form pre-filled.
   `flutter analyze` clean (same 2 pre-existing `RadioListTile` infos), web `tsc --noEmit`/
   `npm run lint` clean. Deployed to production (`vercel deploy --prod`).
+- 2026-08-02: **Dynamic severity-options list, for the built-in-question migration.** The
+  admin edit form's severity section was a hardcoded 4-slot 1-4 scale — fine for admin-added
+  questions (always created that way) but broke the moment the 28 built-in CDSS symptoms
+  moved into the same editable table (see `HIV-Project-Web/CLAUDE.md`'s matching entry): one
+  of them, "seizures/decreased consciousness", only has 2 severity options (scores 3-4), and
+  the old fixed-4 form's `stage2Options.firstWhere((o) => o.score == i + 1)` prefill logic
+  threw (`StateError`, no element) the instant that question's edit screen opened. Replaced
+  with a dynamic `_OptionRow` list (add/remove buttons, each row's score/labelEn/labelId all
+  independently editable) in `screening_questions_screen.dart`'s `_QuestionFormScreen` —
+  `stage2Options` prefills directly from whatever the existing question actually has, no
+  assumed score sequence. The red-flag switch now derives `redFlagAtScore` from the option
+  set's actual max score (`_maxOptionScore()`) instead of hardcoding `4`. Also fixed a small
+  pre-existing bug noticed in the same file: the "Domain is required" validation message was
+  a raw hardcoded English string with a comment noting no i18n key existed for it — one
+  already did (`domainRequired`, unused until now), swapped in.
+  Added `test/screening_questions_edit_test.dart`'s second case specifically reproducing the
+  seizures shape (2 options, scores 3-4, non-sequential) against the *new* dynamic form —
+  confirms no exception on open, exactly 2 rows render (no fabricated score-1/2 entries), and
+  saving preserves the original 2 options untouched. `flutter analyze` clean, both tests in
+  that file pass.
