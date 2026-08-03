@@ -147,32 +147,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (!_escalated)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
-                    child: AppCard(
-                      child: Row(
-                        children: [
-                          Icon(Icons.support_agent, color: Theme.of(context).colorScheme.primary, size: 28),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(AppStrings.t('talkToProviderTitle'), style: Theme.of(context).textTheme.titleSmall),
-                                Text(AppStrings.t('talkToProviderDesc'), style: Theme.of(context).textTheme.bodySmall),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          FilledButton(
-                            onPressed: _startingProvider ? null : _talkToProvider,
-                            child: _startingProvider
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : Text(AppStrings.t('talkToProviderButton')),
-                          ),
-                        ],
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _startingProvider ? null : _talkToProvider,
+                        icon: _startingProvider
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.support_agent),
+                        label: Text(AppStrings.t('talkToProviderButton')),
                       ),
                     ),
                   ),
