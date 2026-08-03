@@ -3,6 +3,7 @@ import '../../../core/api_client.dart';
 import '../../../core/theme.dart';
 import '../../../shared/app_card.dart';
 import '../../../shared/i18n.dart';
+import '../../provider/consultations/consultation_thread_screen.dart';
 
 class ChatMessage {
   final String role; // "USER" | "ASSISTANT"
@@ -35,6 +36,7 @@ class _ChatScreenState extends State<ChatScreen> {
   int? _consultationId;
   PendingEscalation? _pending;
   String? _error;
+  bool _startingProvider = false;
 
   @override
   void initState() {
@@ -86,6 +88,34 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _talkToProvider() async {
+    setState(() {
+      _startingProvider = true;
+      _error = null;
+    });
+    try {
+      // POST /consultations/start dedups against any already-open consultation for this
+      // patient (see the web app's equivalent StartConsultationButton) — safe to tap more
+      // than once, it never spawns a second thread.
+      final res = await dio.post('/consultations/start');
+      final id = res.data['consultationId'] as int;
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ConsultationThreadScreen(consultationId: id, isProviderView: false)),
+      );
+    } catch (e) {
+      setState(() => _error = apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _startingProvider = false);
+    }
+  }
+
+  void _openConsultation(int id) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ConsultationThreadScreen(consultationId: id, isProviderView: false)),
+    );
+  }
+
   Future<void> _confirmEscalation() async {
     if (_chatSessionId == null || _pending == null) return;
     setState(() => _sending = true);
@@ -114,14 +144,54 @@ class _ChatScreenState extends State<ChatScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                if (!_escalated)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+                    child: AppCard(
+                      child: Row(
+                        children: [
+                          Icon(Icons.support_agent, color: Theme.of(context).colorScheme.primary, size: 28),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(AppStrings.t('talkToProviderTitle'), style: Theme.of(context).textTheme.titleSmall),
+                                Text(AppStrings.t('talkToProviderDesc'), style: Theme.of(context).textTheme.bodySmall),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          FilledButton(
+                            onPressed: _startingProvider ? null : _talkToProvider,
+                            child: _startingProvider
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Text(AppStrings.t('talkToProviderButton')),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (_escalated)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
                     child: AppCard(
-                      child: Text(
-                        _consultationId != null
-                            ? AppStrings.escalatedToConsultation(_consultationId!)
-                            : AppStrings.t('chatEnded'),
+                      onTap: _consultationId != null ? () => _openConsultation(_consultationId!) : null,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _consultationId != null
+                                  ? AppStrings.escalatedToConsultation(_consultationId!)
+                                  : AppStrings.t('chatEnded'),
+                            ),
+                          ),
+                          if (_consultationId != null) const Icon(Icons.chevron_right),
+                        ],
                       ),
                     ),
                   ),

@@ -11,7 +11,11 @@ import 'models.dart';
 // the bell's 20s background badge check.
 class ConsultationThreadScreen extends StatefulWidget {
   final int consultationId;
-  const ConsultationThreadScreen({super.key, required this.consultationId});
+  // Claim/Mark Resolved and the patient-history shortcut are PROVIDER/ADMIN-only actions
+  // (the backend already 403s a patient calling claim/resolve — this just keeps the
+  // patient's own view of their thread from showing controls that aren't theirs to use).
+  final bool isProviderView;
+  const ConsultationThreadScreen({super.key, required this.consultationId, this.isProviderView = true});
 
   @override
   State<ConsultationThreadScreen> createState() => _ConsultationThreadScreenState();
@@ -106,9 +110,9 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_patientName ?? 'Consultation'),
+        title: Text(widget.isProviderView ? (_patientName ?? 'Consultation') : AppStrings.t('aiChatbot')),
         actions: [
-          if (_patientId != null)
+          if (widget.isProviderView && _patientId != null)
             IconButton(
               icon: const Icon(Icons.folder_shared_outlined),
               tooltip: 'Patient history',
@@ -130,9 +134,9 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('${AppStrings.t('status')}: $_status'),
-                      if (_status == 'OPEN')
+                      if (widget.isProviderView && _status == 'OPEN')
                         FilledButton(onPressed: _busy ? null : _claim, child: Text(AppStrings.t('claim')))
-                      else if (_status == 'IN_REVIEW')
+                      else if (widget.isProviderView && _status == 'IN_REVIEW')
                         OutlinedButton(onPressed: _busy ? null : _resolve, child: Text(AppStrings.t('markResolved'))),
                     ],
                   ),
@@ -143,15 +147,19 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
                     itemCount: _messages.length,
                     itemBuilder: (context, i) {
                       final m = _messages[i];
-                      final isProvider = m.senderRole == 'PROVIDER';
+                      // "Is this my own message?" flips depending on who's viewing the thread —
+                      // a provider's own messages go on the right when a provider is looking,
+                      // but the same PROVIDER-authored message must go on the LEFT when the
+                      // patient views the identical thread (their own PATIENT messages go right).
+                      final isSelf = widget.isProviderView ? m.senderRole == 'PROVIDER' : m.senderRole == 'PATIENT';
                       return Align(
-                        alignment: isProvider ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment: isSelf ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                           decoration: BoxDecoration(
-                            color: isProvider
+                            color: isSelf
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
@@ -162,9 +170,9 @@ class _ConsultationThreadScreenState extends State<ConsultationThreadScreen> {
                               if (m.senderName != null)
                                 Text(m.senderName!,
                                     style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                                          color: isProvider ? Theme.of(context).colorScheme.onPrimary : null,
+                                          color: isSelf ? Theme.of(context).colorScheme.onPrimary : null,
                                         )),
-                              Text(m.content, style: TextStyle(color: isProvider ? Theme.of(context).colorScheme.onPrimary : null)),
+                              Text(m.content, style: TextStyle(color: isSelf ? Theme.of(context).colorScheme.onPrimary : null)),
                             ],
                           ),
                         ),

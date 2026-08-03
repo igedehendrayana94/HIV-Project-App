@@ -200,6 +200,12 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'aiChatbot': {AppLocale.en: 'Live Consultations', AppLocale.id: 'Konsultasi Langsung'},
   'yesConnectMe': {AppLocale.en: 'Yes, connect me', AppLocale.id: 'Ya, hubungkan saya'},
   'notNow': {AppLocale.en: 'Not now', AppLocale.id: 'Tidak sekarang'},
+  'talkToProviderTitle': {AppLocale.en: 'Prefer to talk to a person?', AppLocale.id: 'Ingin berbicara langsung dengan petugas?'},
+  'talkToProviderDesc': {
+    AppLocale.en: 'Skip the assistant and start a conversation directly with a healthcare provider.',
+    AppLocale.id: 'Lewati asisten dan mulai percakapan langsung dengan petugas kesehatan.',
+  },
+  'talkToProviderButton': {AppLocale.en: 'Talk to a Provider', AppLocale.id: 'Hubungi Petugas'},
 
   // Patient — Registration
   'register': {AppLocale.en: 'Register', AppLocale.id: 'Daftar'},
