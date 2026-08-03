@@ -97,14 +97,14 @@ void main() {
     expect(find.text('Question number 10', skipOffstage: false), findsNothing);
     expect(find.text(AppStrings.pageOf(1, 2), skipOffstage: false), findsOneWidget);
 
-    // Previous is disabled on page 1.
-    var prevButton = tester.widget<TextButton>(
-        find.widgetWithText(TextButton, AppStrings.t('previous'), skipOffstage: false));
-    expect(prevButton.onPressed, isNull);
+    // Previous/Next live in the Scaffold's bottomNavigationBar now (icon buttons with a
+    // tooltip, not a labeled TextButton) — found by tooltip since that's their accessible name.
+    var prevButton = tester.widget<IconButton>(find.ancestor(of: find.byTooltip(AppStrings.t('previous'), skipOffstage: false), matching: find.byType(IconButton)));
+    expect(prevButton.onPressed, isNull, reason: 'Previous should be disabled on page 1');
 
     // Invoke Next directly rather than simulate a tap — same reasoning as the edit-flow test:
     // exact hit-test offsets through a long scrolled list aren't the thing under test here.
-    tester.widget<TextButton>(find.widgetWithText(TextButton, AppStrings.t('next'), skipOffstage: false)).onPressed!();
+    tester.widget<IconButton>(find.ancestor(of: find.byTooltip(AppStrings.t('next'), skipOffstage: false), matching: find.byType(IconButton))).onPressed!();
     await _settle(tester);
 
     // Page 2: questions 10-14 shown, 0-9 not.
@@ -114,13 +114,11 @@ void main() {
     expect(find.text(AppStrings.pageOf(2, 2), skipOffstage: false), findsOneWidget);
 
     // Next is disabled on the last page.
-    final nextButton = tester.widget<TextButton>(
-        find.widgetWithText(TextButton, AppStrings.t('next'), skipOffstage: false));
+    final nextButton = tester.widget<IconButton>(find.ancestor(of: find.byTooltip(AppStrings.t('next'), skipOffstage: false), matching: find.byType(IconButton)));
     expect(nextButton.onPressed, isNull);
 
     // Back to page 1 via Previous.
-    prevButton = tester.widget<TextButton>(
-        find.widgetWithText(TextButton, AppStrings.t('previous'), skipOffstage: false));
+    prevButton = tester.widget<IconButton>(find.ancestor(of: find.byTooltip(AppStrings.t('previous'), skipOffstage: false), matching: find.byType(IconButton)));
     prevButton.onPressed!();
     await _settle(tester);
     expect(find.text('Question number 0', skipOffstage: false), findsOneWidget);
@@ -142,7 +140,7 @@ void main() {
     await _settle(tester);
 
     // Go to page 2 first, to prove searching resets back to page 1.
-    tester.widget<TextButton>(find.widgetWithText(TextButton, AppStrings.t('next'), skipOffstage: false)).onPressed!();
+    tester.widget<IconButton>(find.ancestor(of: find.byTooltip(AppStrings.t('next'), skipOffstage: false), matching: find.byType(IconButton))).onPressed!();
     await _settle(tester);
     expect(find.text('Question number 10', skipOffstage: false), findsOneWidget);
 
@@ -153,8 +151,8 @@ void main() {
     expect(find.text('Question number 14', skipOffstage: false), findsOneWidget);
     expect(find.text('Question number 0', skipOffstage: false), findsNothing);
     expect(find.text('Question number 10', skipOffstage: false), findsNothing);
-    // Single result — no pagination controls shown.
-    expect(find.text(AppStrings.t('previous'), skipOffstage: false), findsNothing);
+    // Single result — no pagination controls shown (bottomNavigationBar is null).
+    expect(find.byTooltip(AppStrings.t('previous'), skipOffstage: false), findsNothing);
 
     // Search for something matching nothing.
     await tester.enterText(find.byType(TextField), 'zzz_no_match');
