@@ -331,3 +331,16 @@ screens.
   viewport (`tester.view.physicalSize`) so a full page fits without scrolling, since the
   pagination *logic* was what needed verifying, not scroll behavior. `flutter analyze` and the
   full test suite clean.
+- 2026-08-03: **Fixed the Add FAB covering the pagination controls, same screen.** Real bug
+  from the feature above: the pagination Row was the last item inside the scrollable
+  `ListView`, which put it in the same bottom-right screen region the floating Add button
+  always occupies — could visually sit on top of Next. Moved pagination into the `Scaffold`'s
+  `bottomNavigationBar` slot instead of the list content; Flutter automatically reserves space
+  and lifts the FAB above whatever's in that slot, so the overlap is now structurally
+  impossible rather than avoided by luck. Also swapped the text Previous/Next buttons for
+  filled-tonal icon buttons (chevron_left/right + tooltip), added a search-icon prefix to the
+  search field, and gave the list extra bottom padding so the last card can't end up under the
+  FAB either. Updated the pagination test for the new control type — `IconButton`'s `Tooltip`
+  is an internal *descendant*, not an ancestor, so the finder needed
+  `find.ancestor(of: find.byTooltip(...), matching: find.byType(IconButton))`, the reverse of
+  the first (wrong) attempt. `flutter analyze` and the full test suite clean.
