@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'api_client.dart';
+import 'push_notifications.dart';
 import 'token_storage.dart';
 
 // Mirrors src/lib/auth.ts's JWTPayload shape exactly — same token, same claims, decoded
@@ -37,6 +38,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     final token = res.data['token'] as String;
     await TokenStorage.save(token);
     state = AsyncData(AuthUser.fromToken(token));
+    await PushNotifications.registerCurrentToken();
   }
 
   // Public self-signup always lands PENDING (see api/auth/signup) — no token comes back, no
@@ -63,6 +65,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
   }
 
   Future<void> logout() async {
+    // Unregister while the Bearer token is still valid to authenticate the call.
+    await PushNotifications.unregisterCurrentToken();
     await TokenStorage.clear();
     state = const AsyncData(null);
   }

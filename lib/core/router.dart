@@ -9,6 +9,13 @@ import '../features/landing/landing_screen.dart';
 import '../features/admin/admin_shell.dart';
 import '../features/patient/patient_shell.dart';
 import '../features/provider/provider_shell.dart';
+import '../features/provider/consultations/consultation_thread_screen.dart';
+
+// Module-level (not created inside routerProvider) so its identity survives the router being
+// torn down/recreated on every auth/locale change (see the ref.watch(localeProvider) comment
+// below) — a push-notification tap needs a stable way to reach the current navigator/context
+// from outside the widget tree, where a route id isn't otherwise reachable.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 // Client-side reimplementation of src/proxy.ts's redirect rules (no middleware layer exists
 // in Flutter). Rebuilds whenever authProvider changes — acceptable for auth transitions
@@ -33,6 +40,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.watch(localeProvider);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) {
       if (authState.isLoading) return null;
@@ -48,6 +56,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
+      // Reachable regardless of which role's shell is active — the only way a cold-started
+      // push-notification tap (see push_notifications.dart) can deep-link into a thread,
+      // since ConsultationThreadScreen otherwise only exists behind an imperative
+      // Navigator.push from inside the inbox/chat screens (no go_router path of its own).
+      GoRoute(
+        path: '/consultations/:id',
+        builder: (context, state) => ConsultationThreadScreen(
+          consultationId: int.parse(state.pathParameters['id']!),
+          isProviderView: role != 'PATIENT',
+        ),
+      ),
       if (role == 'PATIENT') ...patientShellRoutes(),
       if (role == 'PROVIDER') ...providerShellRoutes(),
       if (role == 'ADMIN') ...adminShellRoutes(),

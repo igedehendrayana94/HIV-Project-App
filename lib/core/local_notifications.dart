@@ -77,6 +77,29 @@ class LocalNotifications {
     }
   }
 
+  // Shows a notification immediately — used by PushNotifications to display an incoming FCM
+  // foreground message, since FCM doesn't auto-display a banner on Android while the app is
+  // in the foreground. Reuses this plugin's already-initialized instance rather than standing
+  // up a second notification pipeline; a distinct channel from `medication_reminder` since
+  // this is a different kind of alert (chat message vs. a scheduled alarm).
+  static Future<void> showNow({required int id, required String title, required String body}) async {
+    await _plugin.show(
+      id,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'consultation_message',
+          'Consultation Messages',
+          channelDescription: 'New message notifications for consultation chats',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+      ),
+    );
+  }
+
   static Future<void> cancelReminder() async {
     // reminders occupy ids 1000..1000+N; a generous fixed range covers the realistic max
     // number of times-per-day a patient would ever have, without tracking count separately

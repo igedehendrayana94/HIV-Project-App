@@ -344,3 +344,59 @@ screens.
   is an internal *descendant*, not an ancestor, so the finder needed
   `find.ancestor(of: find.byTooltip(...), matching: find.byType(IconButton))`, the reverse of
   the first (wrong) attempt. `flutter analyze` and the full test suite clean.
+- 2026-08-04: **Real FCM push notification for consultation chat — Android only this pass.**
+  Firebase project created (console walkthrough, project id `medi-care-hiv`), Android app
+  registered (package `com.medicarehiv.hiv_project_app`), `google-services.json` dropped into
+  `android/app/`. Added `firebase_core`/`firebase_messaging` to `pubspec.yaml`, the
+  `com.google.gms.google-services` Gradle plugin to `android/settings.gradle.kts` +
+  `android/app/build.gradle.kts`. New `lib/core/push_notifications.dart` (same static-class
+  shape as `local_notifications.dart`): `init()` calls `Firebase.initializeApp()` + requests
+  notification permission, `FirebaseMessaging.onMessage` hands foreground messages to
+  `LocalNotifications.showNow()` (new method — FCM doesn't auto-banner in the foreground on
+  Android, so it reuses the existing local-notification plugin instance rather than standing
+  up a second display pipeline), `onMessageOpenedApp`/`getInitialMessage` handle a
+  background/cold-start tap. Token lifecycle: `AuthController.login()` calls
+  `PushNotifications.registerCurrentToken()` right after saving the session token,
+  `logout()` calls `unregisterCurrentToken()` *before* clearing it (needs the still-valid
+  Bearer token to authenticate the unregister call) — both wrapped in try/catch, a network
+  blip must never block an actual login/logout.
+  Real gap found while wiring this: `ConsultationThreadScreen` had no `go_router` path at
+  all, only reachable via imperative `Navigator.push` from inside the inbox/chat screens — a
+  cold-started notification tap had nowhere to route into. Added a top-level
+  `GoRoute(path: '/consultations/:id', ...)` in `router.dart` (outside the per-role shells,
+  since it's reached by id regardless of active role) plus a module-level `rootNavigatorKey`
+  (survives the router being torn down/recreated on every auth/locale change) so
+  `push_notifications.dart`'s tap handler can call `context.go(...)` from outside the widget
+  tree.
+  Two real build/verification issues, unrelated to the Firebase work itself, surfaced because
+  this was the **first real Android build this app has ever had** (Android SDK is now present
+  on this machine — the "no Android SDK" note elsewhere in this file's history no longer
+  holds): (1) `flutter_local_notifications` needs Android core library desugaring enabled,
+  fixed with the standard `isCoreLibraryDesugaringEnabled = true` + `desugar_jdk_libs`
+  dependency in `android/app/build.gradle.kts`; (2) `flutter analyze` picked up ~170 unrelated
+  errors from `firebase_messaging`'s own bundled test suite, copied into
+  `build/*/SourcePackages/` by Xcode's Swift Package Manager cache — added an
+  `analyzer: exclude: [build/**]` block to `analysis_options.yaml` (default exclusion wasn't
+  reaching this nested path).
+  Verified live end-to-end on a real Android emulator (Pixel 9, driven via `adb shell input`
+  — UI automation works fine here, unlike the iOS Simulator's host-IDE-overlay-interception
+  problem noted elsewhere in this file, since ADB injects touch events at the OS level):
+  logged in as a real patient, backgrounded the app, sent a message from the provider side via
+  curl — a real system notification appeared (title "Dr. Provider", body matching the sent
+  content exactly) with the app's actual FCM token round-tripped through the real backend.
+  First tap attempt landed on the notification's collapse chevron and just reopened the app to
+  its home tab with no deep-link — added temporary debug logging (`onMessageOpenedApp`
+  fired?, `_handleTap`'s data, `context` non-null?) to confirm this was a mis-tap and not a
+  real bug; a second precisely-placed tap confirmed the full chain — `onMessageOpenedApp`
+  fired with `{type: consultation_message, consultationId: 12}`, `context.go()` was called,
+  and the app landed on the exact right thread showing both real messages. Debug logging
+  removed after confirming. `flutter analyze` clean (same 2 pre-existing `RadioListTile`
+  infos). Test patient/consultation/device-token rows cleaned up from the local dev DB
+  afterward.
+  **iOS explicitly out of scope this pass** — `firebase_core`/`firebase_messaging` are
+  already cross-platform in `pubspec.yaml`, but no iOS-native config (Firebase console app
+  registration, `GoogleService-Info.plist`, Push Notifications capability, `UIBackgroundModes`
+  entitlement, deployment-target bump from 13.0) has been done; real push also can't be
+  fully verified on iOS Simulator regardless (no real APNs — only `xcrun simctl push`'s local
+  simulation), so full iOS verification additionally needs a real device on a paid Apple
+  Developer account. See `HIV-Project-Web/CLAUDE.md`'s matching entry for the backend half.

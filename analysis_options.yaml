@@ -9,6 +9,13 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# `build/` normally isn't analyzed, but macOS/iOS Swift Package Manager caches a copy of
+# firebase_messaging's own test suite under build/*/SourcePackages/, which the analyzer
+# picks up as if it were project code (unrelated mockito/test errors, not a real problem).
+analyzer:
+  exclude:
+    - build/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "386854498600",
+    "project_id": "medi-care-hiv",
+    "storage_bucket": "medi-care-hiv.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:386854498600:android:5dba64b0d3c80496daa01d",
+        "android_client_info": {
+          "package_name": "com.medicarehiv.hiv_project_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlCii9DK2nQlVn7UZ0E1icaeA1WXRKyLs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
