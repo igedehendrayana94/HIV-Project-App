@@ -400,3 +400,51 @@ screens.
   fully verified on iOS Simulator regardless (no real APNs — only `xcrun simctl push`'s local
   simulation), so full iOS verification additionally needs a real device on a paid Apple
   Developer account. See `HIV-Project-Web/CLAUDE.md`'s matching entry for the backend half.
+- 2026-08-04: **iOS push notification follow-up — native config wired, local-simulation
+  verified.** Registered a second Firebase app (iOS, bundle `com.medicarehiv.hivProjectApp`,
+  same `medi-care-hiv` project as Android) and added `GoogleService-Info.plist` to
+  `ios/Runner/` — required manually wiring it into the Xcode project's `PBXBuildFile`/
+  `PBXFileReference`/`PBXGroup`/`PBXResourcesBuildPhase` entries by hand (no Xcode GUI
+  available in this environment), since a loose file in the folder isn't actually bundled
+  into the app without that. Bumped `IPHONEOS_DEPLOYMENT_TARGET` 13.0→15.0 (all 3 build
+  configs), added `Runner/Runner.entitlements` (`aps-environment: development`, wired via
+  `CODE_SIGN_ENTITLEMENTS`) and `UIBackgroundModes: [remote-notification]` to `Info.plist`.
+  First real iOS build for this app pulled Firebase via Swift Package Manager automatically
+  (no `Podfile`/CocoaPods needed — modern Flutter iOS template default) — `flutter run` on a
+  real iPhone 17 Simulator succeeded, app launched clean with zero crash (confirms
+  `Firebase.initializeApp()` found valid config this time, unlike the very first attempt with
+  no plist at all, which would have crashed immediately).
+  **Real, hard environment constraint hit and worked through, not around:** iOS Simulator has
+  no scriptable way to grant or reset notification permission — tried `xcrun simctl privacy
+  grant notifications` (not a valid privacy service; only camera/contacts/location/etc. are),
+  `xcrun simctl privacy reset all` (silently doesn't cover notification authorization either —
+  confirmed empirically, app uninstall/reinstall doesn't re-prompt once decided, exactly
+  matching real iOS device behavior where the OS remembers the decision independent of the
+  app's own data), and `osascript`/System Events UI automation (two different failure modes:
+  accessibility-tree element lookup fails since Simulator renders as one opaque surface to
+  macOS Accessibility — same root cause as this file's existing "UI automation not reliably
+  available" note — and a raw coordinate click failed separately with `-25211 osascript is
+  not allowed assistive access`, meaning the CLI process itself has no Accessibility
+  permission grantable without its own manual System Settings toggle). Net result: this class
+  of interaction is not scriptable from this environment by any means tried, full stop — not
+  a timing issue, an actual capability gap. Resolved by asking the user to grant the
+  permission via Settings → Medi-Care HIV → Notifications directly (skips the transient
+  system dialog entirely, which is also too short-lived to reliably catch turn-by-turn in a
+  chat interface) and separately confirm the tap-to-deep-link result by eye, since a
+  system-initiated cold-launch (from a fully-terminated state, via notification tap) doesn't
+  reliably reattach `flutter run`'s own debug session — its `debugPrint` log capture is a
+  real blind spot for exactly this scenario, discovered when a genuinely successful tap
+  (user-confirmed: opened straight to "Konsultasi Langsung") left zero trace in the log
+  despite the same debug-logging approach working perfectly on Android moments earlier in
+  the same session. `xrun simctl push` itself (the actual mechanism being verified) worked
+  correctly throughout — confirmed via a real payload (`type: consultation_message,
+  consultationId: 999`) producing a banner with the exact title/body sent, and a
+  user-confirmed tap landing on the exact right thread screen. Debug logging removed after.
+  `flutter analyze` clean (same 2 pre-existing infos). `Package.resolved` (both the
+  `.xcodeproj` and `.xcworkspace` copies SPM generates) committed alongside, same reasoning
+  as `pubspec.lock`/`package-lock.json` — pins exact resolved SDK versions for reproducible
+  builds. Still not done for real production iOS use: no Apple Developer Program enrollment,
+  no real-device verification, `_registerToken()` still hardcodes `'platform': 'android'`
+  (harmless for this local-simulation pass since no login/registration flow was exercised
+  against a real backend on iOS this round, but would need a `Platform.isIOS` branch before
+  iOS push is ever wired to the real backend send path).

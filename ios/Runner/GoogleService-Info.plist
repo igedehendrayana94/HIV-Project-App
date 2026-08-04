@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyBt1qq7dSsqD6hx_q4jy4fIj9Lw6CaeeyM</string>
+	<key>GCM_SENDER_ID</key>
+	<string>386854498600</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.medicarehiv.hivProjectApp</string>
+	<key>PROJECT_ID</key>
+	<string>medi-care-hiv</string>
+	<key>STORAGE_BUCKET</key>
+	<string>medi-care-hiv.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:386854498600:ios:1cf3acfdef3db0ffdaa01d</string>
+</dict>
+</plist>
