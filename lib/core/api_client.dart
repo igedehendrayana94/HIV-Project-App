@@ -17,6 +17,10 @@ final dio = Dio(BaseOptions(baseUrl: apiBaseUrl))
       onRequest: (options, handler) async {
         final token = await TokenStorage.read();
         if (token != null) options.headers['Authorization'] = 'Bearer $token';
+        // The web app's chat routes read locale from a cookie (LanguageToggle) — this app
+        // has no cookie jar, so it sends its own locale here instead (see
+        // HIV-Project-Web's lib/serverTranslate.ts, header takes priority over the cookie).
+        options.headers['X-Locale'] = AppStrings.locale == AppLocale.id ? 'id' : 'en';
         handler.next(options);
       },
       onError: (error, handler) async {
