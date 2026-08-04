@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/local_notifications.dart';
 import 'core/locale_state.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
 import 'shared/i18n.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LocalNotifications.init();
   runApp(const ProviderScope(child: MediCareHivApp()));
 }
 

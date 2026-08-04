@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../../core/local_notifications.dart';
 import '../../../core/theme.dart';
 import '../../../shared/app_card.dart';
 import '../../../shared/async_error_view.dart';
@@ -21,6 +22,19 @@ class ReminderScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reminderAsync = ref.watch(reminderProvider);
+    // Reschedule the on-device alarm whenever the patient's own reminder data actually
+    // changes (not on every rebuild — ref.listen only fires on a new provider value) so an
+    // edited/deactivated reminder never leaves a stale alarm still armed on-device.
+    ref.listen(reminderProvider, (previous, next) async {
+      final reminder = next.value;
+      final active = reminder != null && reminder['active'] == true;
+      if (!active) {
+        await LocalNotifications.cancelReminder();
+        return;
+      }
+      await LocalNotifications.requestPermission();
+      await LocalNotifications.scheduleReminder(times: reminder['times'] as String, title: null);
+    });
     return Scaffold(
       appBar: AppBar(title: Text(AppStrings.t('medicationReminder'))),
       body: reminderAsync.when(
