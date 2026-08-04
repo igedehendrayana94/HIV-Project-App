@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:go_router/go_router.dart';
@@ -6,10 +7,11 @@ import 'local_notifications.dart';
 import 'router.dart';
 
 // Real FCM push for consultation chat messages — separate mechanism from
-// LocalNotifications (on-device scheduled alarm, no server involved). Android only for
-// now (see HIV-Project-App/CLAUDE.md); firebase_core/firebase_messaging are cross-platform
-// so no rework needed here once iOS native config (entitlements, capability,
-// GoogleService-Info.plist) is added later.
+// LocalNotifications (on-device scheduled alarm, no server involved). Both platforms'
+// native config are wired (see HIV-Project-App/CLAUDE.md) — Android verified end-to-end in
+// production; iOS verified only via xcrun simctl push's local simulation, since Simulator
+// can never receive a real backend-triggered push (no real APNs registration exists for
+// it) — only a real device can prove that leg.
 class PushNotifications {
   static bool _initialized = false;
 
@@ -49,7 +51,7 @@ class PushNotifications {
   }
 
   static Future<void> _registerToken(String token) async {
-    await dio.post('/device-tokens', data: {'token': token, 'platform': 'android'});
+    await dio.post('/device-tokens', data: {'token': token, 'platform': Platform.isIOS ? 'ios' : 'android'});
   }
 
   // Called after login — registers the current device's token against the now-known user.

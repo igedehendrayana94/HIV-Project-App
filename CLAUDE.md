@@ -448,3 +448,13 @@ screens.
   (harmless for this local-simulation pass since no login/registration flow was exercised
   against a real backend on iOS this round, but would need a `Platform.isIOS` branch before
   iOS push is ever wired to the real backend send path).
+- 2026-08-04: **Fixed the `platform: 'android'` hardcode flagged above.** `_registerToken()`
+  now sends `Platform.isIOS ? 'ios' : 'android'` (`dart:io`'s `Platform`, already a transitive
+  dependency, no new package). Also re-confirmed for the user, since it came up again: an
+  admin/provider message already notifies the patient and vice versa — `senderRole !==
+  "PATIENT"` on the backend covers PROVIDER *and* ADMIN senders identically, nothing to fix
+  there. And reiterated the hard platform fact once more (came up as a real question this
+  session): iOS Simulator structurally cannot ever receive a genuine backend-triggered push —
+  not a missing feature, not fixable by more code, true on any Apple Developer account tier —
+  only `xcrun simctl push`'s local simulation works there; a real device is the only way to
+  prove the actual end-to-end leg. `flutter analyze` clean (same 2 pre-existing infos).
